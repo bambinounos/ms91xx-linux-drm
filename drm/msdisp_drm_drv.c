@@ -70,6 +70,12 @@ static const struct file_operations msdisp_drm_driver_fops = {
 	.unlocked_ioctl = drm_ioctl,
 	.release = drm_release,
 	.llseek = noop_llseek,
+#if KERNEL_VERSION(6, 12, 0) <= LINUX_VERSION_CODE
+	/* drm_open_helper() rechaza con -EINVAL cualquier open() de fops
+	 * sin esta bandera desde 6.12; sin ella Mutter no puede abrir el card.
+	 */
+	.fop_flags = FOP_UNSIGNED_OFFSET,
+#endif
 };
 
 #if KERNEL_VERSION(5, 11, 0) <= LINUX_VERSION_CODE || defined(EL8)
