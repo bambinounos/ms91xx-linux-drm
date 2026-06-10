@@ -143,6 +143,9 @@ int msdisp_platform_device_remove(struct platform_device *pdev);
 struct drm_framebuffer *msdisp_drm_fb_user_fb_create(
 				struct drm_device *dev,
 				struct drm_file *file,
+#if KERNEL_VERSION(6, 15, 0) <= LINUX_VERSION_CODE
+				const struct drm_format_info *info,
+#endif
 				const struct drm_mode_fb_cmd2 *mode_cmd);
 
 int msdisp_drm_dumb_create(struct drm_file *file_priv,

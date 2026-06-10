@@ -175,6 +175,9 @@ int msdisp_drm_fb_get_bpp(uint32_t format)
 struct drm_framebuffer *msdisp_drm_fb_user_fb_create(
 					struct drm_device *dev,
 					struct drm_file *file,
+#if KERNEL_VERSION(6, 15, 0) <= LINUX_VERSION_CODE
+					const struct drm_format_info *info,
+#endif
 					const struct drm_mode_fb_cmd2 *mode_cmd)
 {
 	struct drm_gem_object *obj;

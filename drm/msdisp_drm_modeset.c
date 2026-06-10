@@ -14,6 +14,7 @@
 
 
 #include <linux/version.h>
+#include <linux/vmalloc.h>
 #if KERNEL_VERSION(5, 16, 0) <= LINUX_VERSION_CODE
 #include <drm/drm_vblank.h>
 #include <drm/drm_damage_helper.h>
