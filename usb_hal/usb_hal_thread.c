@@ -15,6 +15,7 @@
 #include <linux/slab.h>
 #include <linux/usb.h>
 #include <linux/kfifo.h>
+#include <linux/scatterlist.h>
 
 #include "usb_hal_interface.h"
 #include "usb_hal_dev.h"
