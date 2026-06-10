@@ -125,7 +125,11 @@ static int msdisp_drm_get_modes(struct drm_connector *connector)
 }
 
 static enum drm_mode_status msdisp_drm_mode_valid(struct drm_connector *connector,
+#if KERNEL_VERSION(6, 15, 0) <= LINUX_VERSION_CODE
+					    const struct drm_display_mode *mode)
+#else
 					    struct drm_display_mode *mode)
+#endif
 {
 	struct msdisp_drm_pipeline* pipeline;
 	struct msdisp_usb_hal* usb_hal;

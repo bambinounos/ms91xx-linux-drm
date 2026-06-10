@@ -1,4 +1,4 @@
-msdisp_drm_modeset.o: msdisp_drm_modeset.c \
+msdisp_drm_connector.o: msdisp_drm_connector.c \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/compiler-version.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/kconfig.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/generated/autoconf.h \
@@ -6,10 +6,15 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/compiler_attributes.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/compiler-gcc.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/generated/uapi/linux/version.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_vblank.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/seqlock.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/compiler.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_crtc.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/spinlock.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/typecheck.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/preempt.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/linkage.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/compiler_types.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/stringify.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/export.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/compiler.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/generated/asm/rwonce.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/rwonce.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/kasan-checks.h \
@@ -29,28 +34,44 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/uapi/asm/posix_types_64.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/asm-generic/posix_types.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/kcsan-checks.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/lockdep.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/lockdep_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/smp.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/errno.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/errno.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/linkage.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/ibt.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/cleanup.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/err.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/generated/uapi/asm/errno.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/asm-generic/errno.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/asm-generic/errno-base.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/list.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/container_of.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/args.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/preempt.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/rmwcc.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/percpu.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/build_bug.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/poison.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/asm.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/extable_fixup_types.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/percpu.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/threads.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/percpu-defs.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/static_call_types.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/irqflags.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/irqflags_types.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/irqflags.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/processor-flags.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/uapi/asm/processor-flags.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/const.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/vdso/const.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/const.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/barrier.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/alternative.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/stringify.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/mem_encrypt.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/mem_encrypt.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/init.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/cc_platform.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/nospec-branch.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/static_key.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/jump_label.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/jump_label.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/nops.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/objtool.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/objtool_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/asm.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/extable_fixup_types.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/alternative.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/bug.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/instrumentation.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/bug.h \
@@ -58,12 +79,7 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/panic.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/stdarg.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/printk.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/init.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/kern_levels.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/linkage.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/export.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/linkage.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/ibt.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/ratelimit_types.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/bits.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/vdso/bits.h \
@@ -87,29 +103,43 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/swab.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/uapi/asm/swab.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/byteorder/generic.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/lockdep_types.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/dynamic_debug.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/jump_label.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/cleanup.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/err.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/args.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/jump_label.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/nops.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/barrier.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/cpufeatures.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/msr-index.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/unwind_hints.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/orc_types.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/asm-offsets.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/generated/asm-offsets.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/GEN-for-each-reg.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/segment.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/cache.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/paravirt.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/paravirt_types.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/desc_defs.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/pgtable_types.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/page_types.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/vdso/page.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/page_64_types.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/kaslr.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/pgtable_64_types.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/sparsemem.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/bug.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/cpumask.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/kernel.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/align.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/vdso/align.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/array_size.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/container_of.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/bitops.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/typecheck.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/kernel.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/sysinfo.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/bitops/generic-non-atomic.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/barrier.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/barrier.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/bitops.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/rmwcc.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/bitops/sched.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/arch_hweight.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/cpufeatures.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/bitops/const_hweight.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/bitops/instrumented-atomic.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/instrumented.h \
@@ -126,11 +156,12 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/div64.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/minmax.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/sprintf.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/static_call_types.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/instruction_pointer.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/util_macros.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/wordpart.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/bitmap.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/errno.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/errno.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/find.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/string.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/string.h \
@@ -138,10 +169,8 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/string_64.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/fortify-string.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/bitfield.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/bug.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/bitmap-str.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/cpumask_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/threads.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/atomic.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/atomic.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/cmpxchg.h \
@@ -155,6 +184,8 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/nodemask.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/nodemask_types.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/random.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/list.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/poison.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/random.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/ioctl.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/generated/uapi/asm/ioctl.h \
@@ -162,29 +193,14 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/asm-generic/ioctl.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/irqnr.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/irqnr.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/sparsemem.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/smp_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/llist.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/preempt.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/preempt.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/percpu.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/percpu.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/percpu-defs.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/frame.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/thread_info.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/restart_block.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/current.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/cache.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/vdso/cache.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/cache.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/thread_info.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/page.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/page_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/mem_encrypt.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/mem_encrypt.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/cc_platform.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/vdso/page.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/page_64_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/kaslr.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/page_64.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/range.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/memory_model.h \
@@ -192,36 +208,16 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/getorder.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/cpufeature.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/processor.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/processor-flags.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/uapi/asm/processor-flags.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/math_emu.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/ptrace.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/segment.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/uapi/asm/ptrace.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/uapi/asm/ptrace-abi.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/paravirt_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/desc_defs.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/pgtable_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/pgtable_64_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/nospec-branch.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/static_key.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/msr-index.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/unwind_hints.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/orc_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/asm-offsets.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/generated/asm-offsets.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/GEN-for-each-reg.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/proto.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/uapi/asm/ldt.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/uapi/asm/sigcontext.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/cpuid/api.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/cpuid/types.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/paravirt.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/frame.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/special_insns.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/irqflags.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/irqflags_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/irqflags.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/fpu/types.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/vmxfeatures.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/vdso/processor.h \
@@ -231,19 +227,17 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/math64.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/vdso/math64.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/generated/asm/cpufeaturemasks.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/bottom_half.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/lockdep.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/smp.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/smp_types.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/llist.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/smp.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/cpumask.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/mutex.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/spinlock_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/rwlock_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/osq_lock.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/debug_locks.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/mutex_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/seqlock_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/spinlock.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/bottom_half.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/generated/asm/mmiowb.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/mmiowb.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/spinlock_types.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/rwlock_types.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/spinlock.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/qspinlock.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/qspinlock.h \
@@ -252,8 +246,57 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/rwlock.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/spinlock_api_smp.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/rwlock_api_smp.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/idr.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/radix-tree.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_modeset_lock.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/stackdepot.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/gfp.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/mmzone.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/list_nulls.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/wait.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/seqlock.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/mutex.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/osq_lock.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/debug_locks.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/mutex_types.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/seqlock_types.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/pageblock-flags.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/page-flags-layout.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/generated/bounds.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/mm_types.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/mm_types_task.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/tlbbatch.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/auxvec.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/auxvec.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/uapi/asm/auxvec.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/kref.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/refcount.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/refcount_types.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/rbtree.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/rbtree_types.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/rcupdate.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/context_tracking_irq.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/rcutree.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/maple_tree.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/rwsem.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/completion.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/swait.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/uprobes.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/timer.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/ktime.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/jiffies.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/time.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/time64.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/vdso/time64.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/time.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/time_types.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/time32.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/timex.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/timex.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/timex.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/tsc.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/msr.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/msr-index.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/uapi/asm/msr.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/shared/msr.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/percpu.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/alloc_tag.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/codetag.h \
@@ -268,13 +311,10 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/plist_types.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/hrtimer_types.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/timerqueue_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/rbtree_types.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/timer_types.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/seccomp_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/refcount_types.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/resource.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/resource.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/time_types.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/generated/uapi/asm/resource.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/resource.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/asm-generic/resource.h \
@@ -289,8 +329,6 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/uapi/asm/siginfo.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/asm-generic/siginfo.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/syscall_user_dispatch_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/mm_types_task.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/tlbbatch.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/netdevice_xmit.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/task_io_accounting.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/posix-timers_types.h \
@@ -305,45 +343,6 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/sched/ext.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/rhashtable-types.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/workqueue_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/rcupdate.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/context_tracking_irq.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/rcutree.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/xarray.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/gfp.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/mmzone.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/list_nulls.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/wait.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/pageblock-flags.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/page-flags-layout.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/generated/bounds.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/mm_types.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/auxvec.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/auxvec.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/uapi/asm/auxvec.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/kref.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/refcount.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/rbtree.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/maple_tree.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/rwsem.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/completion.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/swait.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/uprobes.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/timer.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/ktime.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/jiffies.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/time.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/time64.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/vdso/time64.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/time.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/time32.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/timex.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/timex.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/timex.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/tsc.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/msr.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/msr-index.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/uapi/asm/msr.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/shared/msr.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/vdso/time32.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/vdso/time.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/vdso/jiffies.h \
@@ -377,12 +376,74 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/apicdef.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/topology.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/cpu_smt.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/ww_mutex.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/rtmutex.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_mode_object.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_lease.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_modes.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/hdmi.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/device.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/dev_printk.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/ratelimit.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/energy_model.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/kobject.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/sysfs.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/kernfs.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/idr.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/radix-tree.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/xarray.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/kconfig.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/sched/mm.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/sync_core.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/sync_core.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/sched/coredump.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/poll.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/uidgid.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/highuid.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/kobject_ns.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/stat.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/uapi/asm/stat.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/stat.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/sched/cpufreq.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/sched/topology.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/sched/idle.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/sched/sd_flags.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/ioport.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/klist.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/pm.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/device/bus.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/device/class.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/device/devres.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/device/driver.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/module.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/buildid.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/kmod.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/umh.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/sysctl.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/sysctl.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/elf.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/elf.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/ia32.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/compat.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/sem.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/sem.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/ipc.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/ipc.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/generated/uapi/asm/ipcbuf.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/asm-generic/ipcbuf.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/uapi/asm/sembuf.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/socket.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/generated/uapi/asm/socket.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/asm-generic/socket.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/generated/uapi/asm/sockios.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/asm-generic/sockios.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/sockios.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/uio.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/ucopysize.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/uio.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/socket.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/if.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/libc-compat.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/hdlc/ioctl.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/fs.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/vfsdebug.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/wait_bit.h \
@@ -397,11 +458,6 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/stringhash.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/hash.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/path.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/stat.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/uapi/asm/stat.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/stat.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/uidgid.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/highuid.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/list_lru.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/shrinker.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/pid.h \
@@ -423,7 +479,6 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/uaccess.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/fault-inject-usercopy.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/nospec.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/ucopysize.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/uaccess.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/mmap_lock.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/smap.h \
@@ -448,11 +503,8 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/access_ok.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/cred.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/key.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/sysctl.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/sysctl.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/assoc_array.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/sched/user.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/ratelimit.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/posix-timers.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/alarmtimer.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/hrtimer.h \
@@ -486,86 +538,6 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/dqblk_qtree.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/projid.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/quota.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/poll.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/generated/uapi/asm/poll.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/asm-generic/poll.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/eventpoll.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/kthread.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_file.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/drm/drm.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/drm/drm_mode.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/drm/drm.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_prime.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/scatterlist.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/mm.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/pgalloc_tag.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/page_ext.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/stacktrace.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/page_ref.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/sizes.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/pgtable.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/memremap.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/ioport.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/cacheinfo.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/cpuhplock.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/huge_mm.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/kobject.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/sysfs.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/kernfs.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/kobject_ns.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/vmstat.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/vm_event_item.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/io.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/generated/asm/early_ioremap.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/early_ioremap.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/shared/io.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/io.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/iomap.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/pci_iomap.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/logic_pio.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/fwnode.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_modes.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/hdmi.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/device.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/dev_printk.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/energy_model.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/sched/cpufreq.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/sched/topology.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/sched/idle.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/sched/sd_flags.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/klist.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/pm.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/device/bus.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/device/class.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/device/devres.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/device/driver.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/module.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/buildid.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/kmod.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/umh.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/elf.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/elf.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/ia32.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/compat.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/sem.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/sem.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/ipc.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/ipc.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/generated/uapi/asm/ipcbuf.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/asm-generic/ipcbuf.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/uapi/asm/sembuf.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/socket.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/generated/uapi/asm/socket.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/asm-generic/socket.h \
- /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/generated/uapi/asm/sockios.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/asm-generic/sockios.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/sockios.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/uio.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/uio.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/socket.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/if.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/libc-compat.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/hdlc/ioctl.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/aio_abi.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/unistd.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/unistd.h \
@@ -594,8 +566,6 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/orc_types.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/device.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/pm_wakeup.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_mode_object.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_lease.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_connector.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/ctype.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_util.h \
@@ -617,6 +587,19 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/trace_clock.h \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/trace_clock.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/kallsyms.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/mm.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/pgalloc_tag.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/page_ext.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/stacktrace.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/page_ref.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/sizes.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/pgtable.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/memremap.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/cacheinfo.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/cpuhplock.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/huge_mm.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/vmstat.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/vm_event_item.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/ptrace.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/pid_namespace.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/nsproxy.h \
@@ -639,13 +622,8 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/kgdb.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_property.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/drm/drm_mode.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_damage_helper.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_atomic_helper.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_crtc.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_modeset_lock.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/stackdepot.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/ww_mutex.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/rtmutex.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/drm/drm.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/drm/drm_mode.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_device.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_mode_config.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_plane.h \
@@ -653,35 +631,54 @@ msdisp_drm_modeset.o: msdisp_drm_modeset.c \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_color_mgmt.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_rect.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_debugfs_crc.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_edid.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_crtc_helper.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_atomic_helper.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_modeset_helper_vtables.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_encoder.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/drm/drm_mode.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_modeset_helper.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_atomic_state_helper.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_atomic.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_crtc_helper.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_plane_helper.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_gem_atomic_helper.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/iosys-map.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/io.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_format_helper.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_fourcc.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/uapi/drm/drm_fourcc.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/dma-buf.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/file.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/dma-mapping.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/dma-direction.h \
- /usr/src/linux-headers-6.17.0-35-generic/include/linux/dma-fence.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_probe_helper.h \
  msdisp_drm_drv.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/kfifo.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_drv.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/video/nomodeset.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_fourcc.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/drm/drm_fourcc.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_ioctl.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_vblank.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/poll.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/poll.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/generated/uapi/asm/poll.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/asm-generic/poll.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/linux/eventpoll.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/kthread.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_file.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/uapi/drm/drm.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_prime.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/scatterlist.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/io.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/generated/asm/early_ioremap.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/early_ioremap.h \
+ /usr/src/linux-headers-6.17.0-35-generic/arch/x86/include/asm/shared/io.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/io.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/iomap.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/asm-generic/pci_iomap.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/logic_pio.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/fwnode.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_framebuffer.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_gem.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/dma-buf.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/iosys-map.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/io.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/file.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/dma-mapping.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/dma-direction.h \
+ /usr/src/linux-headers-6.17.0-35-generic/include/linux/dma-fence.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/linux/dma-resv.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_vma_manager.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_mm.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/drm/drm_print.h \
  /usr/src/linux-headers-6.17.0-35-generic/include/uapi/drm/drm.h \
- msdisp_drm_event.h msdisp_common_util.h msdisp_usb_interface.h
+ msdisp_drm_connector.h msdisp_usb_interface.h msdisp_drm_mode.h
