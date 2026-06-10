@@ -150,7 +150,16 @@ msdisp_drm_framebuffer_init(struct drm_device *dev,
 		      struct msdisp_drm_gem_object *obj)
 {
 	efb->obj = obj;
+#if KERNEL_VERSION(6, 15, 0) <= LINUX_VERSION_CODE
+	/* fill_fb_struct takes the format info explicitly since 6.15 */
+	drm_helper_mode_fill_fb_struct(dev, &efb->base,
+				       drm_get_format_info(dev,
+							   mode_cmd->pixel_format,
+							   mode_cmd->modifier[0]),
+				       mode_cmd);
+#else
 	drm_helper_mode_fill_fb_struct(dev, &efb->base, mode_cmd);
+#endif
 	return drm_framebuffer_init(dev, &efb->base, &msdisp_drmfb_funcs);
 }
 

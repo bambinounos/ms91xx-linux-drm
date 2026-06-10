@@ -18,6 +18,7 @@
 #define __MSDISP_PLATFORM_DEV_H__
 
 #include <linux/types.h>
+#include <linux/version.h>
 
 struct platform_device_info;
 struct platform_device;
@@ -28,7 +29,11 @@ struct platform_device *msdisp_platform_dev_create(struct platform_device_info *
 void msdisp_platform_dev_destroy(struct platform_device *dev);
 
 int msdisp_platform_device_probe(struct platform_device *pdev);
+#if KERNEL_VERSION(6, 11, 0) <= LINUX_VERSION_CODE
+void msdisp_platform_device_remove(struct platform_device *pdev);
+#else
 int msdisp_platform_device_remove(struct platform_device *pdev);
+#endif
 
 #endif
 

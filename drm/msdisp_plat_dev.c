@@ -79,6 +79,15 @@ err_free:
 	return PTR_ERR_OR_ZERO(dev);
 }
 
+#if KERNEL_VERSION(6, 11, 0) <= LINUX_VERSION_CODE
+/* platform_driver.remove returns void since 6.11 */
+void msdisp_platform_device_remove(struct platform_device *pdev)
+{
+	struct drm_device *drm = platform_get_drvdata(pdev);
+
+	msdisp_drm_device_remove(drm);
+}
+#else
 int msdisp_platform_device_remove(struct platform_device *pdev)
 {
 	struct drm_device *drm = platform_get_drvdata(pdev);
@@ -86,4 +95,5 @@ int msdisp_platform_device_remove(struct platform_device *pdev)
 	msdisp_drm_device_remove(drm);
 	return 0;
 }
+#endif
 

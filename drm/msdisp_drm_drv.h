@@ -31,7 +31,9 @@
 #else
 #include <drm/drmP.h>
 #endif
-#if KERNEL_VERSION(5, 15, 0) <= LINUX_VERSION_CODE
+#if KERNEL_VERSION(6, 8, 0) <= LINUX_VERSION_CODE
+/* drm_legacy.h fue eliminado en 6.8; no se necesita nada de ahi */
+#elif KERNEL_VERSION(5, 15, 0) <= LINUX_VERSION_CODE
 #include <drm/drm_legacy.h>
 #else
 #include <drm/drm_irq.h>
@@ -132,7 +134,11 @@ struct msdisp_drm_device {
 
 #define to_msdisp_drm(x) container_of(x, struct msdisp_drm_device, drm)
 
+#if KERNEL_VERSION(6, 11, 0) <= LINUX_VERSION_CODE
+void msdisp_platform_device_remove(struct platform_device *pdev);
+#else
 int msdisp_platform_device_remove(struct platform_device *pdev);
+#endif
 
 struct drm_framebuffer *msdisp_drm_fb_user_fb_create(
 				struct drm_device *dev,

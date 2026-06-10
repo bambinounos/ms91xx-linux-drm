@@ -186,7 +186,28 @@ msdisp_drm_detect(struct drm_connector *connector, __always_unused bool force)
             kfree(msdisp_connector->edid);
         }
 
+#if KERNEL_VERSION(6, 13, 0) <= LINUX_VERSION_CODE
+        /* drm_do_get_edid() was removed in 6.13; read via drm_edid and
+         * keep a raw copy so the rest of the driver (kfree/add_modes)
+         * works unchanged.
+         */
+        {
+            const struct drm_edid *drm_edid;
+            const struct edid *raw;
+
+            msdisp_connector->edid = NULL;
+            drm_edid = drm_edid_read_custom(connector, msdisp_drm_get_edid_block, pipeline);
+            if (drm_edid) {
+                raw = drm_edid_raw(drm_edid);
+                if (raw)
+                    msdisp_connector->edid = kmemdup(raw,
+                        (raw->extensions + 1) * EDID_LENGTH, GFP_KERNEL);
+                drm_edid_free(drm_edid);
+            }
+        }
+#else
         msdisp_connector->edid = drm_do_get_edid(connector, msdisp_drm_get_edid_block, pipeline);
+#endif
 	    if (!msdisp_connector->edid) {
             DRM_ERROR("get edid failed!\n");
 		    return connector_status_disconnected;
