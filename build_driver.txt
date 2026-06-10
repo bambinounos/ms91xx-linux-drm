@@ -1,0 +1,35 @@
+﻿本驱动模块可实现系统屏幕的投屏显示；
+如果您在前面已经加载了usbdisp_fb.ko模块，请先将其卸载，否则可能会有冲突。
+
+1. 编译：
+    本机编译在驱动代码根目录下执行make指令在生成驱动模块(*.ko)
+
+2. 加载：
+    先加载usbdisp_drm模块，再加载usbdisp_usb模块，例如:
+      sudo insmod ./drm/usbdisp_drm.ko
+      sudo insmod ./drm/usbdisp_usb.ko
+
+    在驱动模块加载完成后，需重新启动xserver，例如：
+      sudo systemctl restart display-manager
+
+3. 查看驱动加载结果：
+    执行lsmod | grep usbdisp查看驱动是否已加载到系统。
+
+4. 环境要求：
+    -支持linux kernel 4.19及以上版本；
+    -依赖于X11的桌面环境运行；
+    -依赖主显卡的Source Output能力；
+
+5. 如果无法正常投屏显示，参考以下操作进行排查： 
+  5.1 查看系统的主显卡是否具备Source Output能力?
+    (1).查看providers：xrandr --listproviders
+    (2).查看列出的"provider 0"的 'cap' 中是否有'Source Output'字段
+    (3).一般主显卡是"provider: 0"，满足要求的cap值为0x9、0xf
+
+  5.2 按5.1方法查看主显卡具备Source Output能力，但是还不能完成显示，而且模块的"associated providers"值为 0？
+    驱动依赖显卡的渲染能力，该情形下需要我们把设备模块与主显卡进行关联：
+    (1).指令：
+        xrandr --setprovideroutputsource <prov-xid> <source-xid>
+
+        示例：xrandr --setprovideroutputsource 1 0
+        其中1表示“provider: 1”, 对应我们的设备模块(数值要依据环境判断)，0表示“provider：0”，对应系统的显卡设备。
