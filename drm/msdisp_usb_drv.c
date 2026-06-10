@@ -38,7 +38,9 @@
 #include "msdisp_usb_drv.h"
 #include "usb_hal_interface.h"
 
-#if KERNEL_VERSION(5, 10, 0) <= LINUX_VERSION_CODE
+#if KERNEL_VERSION(6, 13, 0) <= LINUX_VERSION_CODE
+MODULE_IMPORT_NS("usbdisp_drm");
+#elif KERNEL_VERSION(5, 10, 0) <= LINUX_VERSION_CODE
 MODULE_IMPORT_NS(usbdisp_drm);
 #endif
 

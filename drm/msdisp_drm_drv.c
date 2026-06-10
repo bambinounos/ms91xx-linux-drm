@@ -115,9 +115,12 @@ static struct drm_driver driver = {
 
 	.fops = &msdisp_drm_driver_fops,
 
+#if KERNEL_VERSION(6, 6, 0) > LINUX_VERSION_CODE
+	/* removed from drm_driver in 6.6; the core uses these as defaults */
 	.prime_fd_to_handle = drm_gem_prime_fd_to_handle,
-	.gem_prime_import = drm_gem_prime_import,
 	.prime_handle_to_fd = drm_gem_prime_handle_to_fd,
+#endif
+	.gem_prime_import = drm_gem_prime_import,
 #if KERNEL_VERSION(5, 11, 0) <= LINUX_VERSION_CODE || defined(EL8)
 #else
 	.gem_prime_export = drm_gem_prime_export,
@@ -129,7 +132,9 @@ static struct drm_driver driver = {
 
 	.name = DRIVER_NAME,
 	.desc = DRIVER_DESC,
+#if KERNEL_VERSION(6, 14, 0) > LINUX_VERSION_CODE
 	.date = DRIVER_DATE,
+#endif
 	.major = DRIVER_MAJOR,
 	.minor = DRIVER_MINOR,
 	.patchlevel = DRIVER_PATCH,
@@ -151,7 +156,11 @@ static void msdisp_drm_handle_page_flip(struct msdisp_drm_pipeline* pipeline)
 
 static void msidsip_drm_timer_func(struct timer_list* t)
 {
-	struct msdisp_drm_device *msdisp = from_timer(msdisp, t, vblank_timer); 
+#if KERNEL_VERSION(6, 16, 0) <= LINUX_VERSION_CODE
+	struct msdisp_drm_device *msdisp = timer_container_of(msdisp, t, vblank_timer);
+#else
+	struct msdisp_drm_device *msdisp = from_timer(msdisp, t, vblank_timer);
+#endif
 	struct drm_crtc* crtc;
 	int i;
 
@@ -316,7 +325,11 @@ int msdisp_drm_device_remove(struct drm_device *drm)
 		(void)kfifo_free(&msdisp_drm->pipeline[i].fifo);
 	}
 
+#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
+	timer_delete(&msdisp_drm->vblank_timer);
+#else
 	del_timer(&msdisp_drm->vblank_timer);
+#endif
 	msdisp_drm_sysfs_exit(msdisp_drm);
 	drm_dev_unplug(drm);
 
