@@ -1,1 +1,0 @@
-savedcmd_usbdisp_drm.ko := ld -r -m elf_x86_64 -z noexecstack --no-warn-rwx-segments --build-id=sha1  -T /usr/src/linux-headers-6.17.0-35-generic/scripts/module.lds -o usbdisp_drm.ko usbdisp_drm.o usbdisp_drm.mod.o .module-common.o
