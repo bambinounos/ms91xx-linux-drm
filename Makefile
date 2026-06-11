@@ -1,14 +1,11 @@
-export HAL_PATH := $(PWD)/usb_hal
-export DRM_PATH := $(PWD)/drm
+export HAL_PATH := $(CURDIR)/usb_hal
+export DRM_PATH := $(CURDIR)/drm
 export USB_HAL := hal_adaptor.o usb_device.o usb_hal_interface.o usb_hal_sysfs.o usb_hal_thread.o
 
+# Nota: la rama "ifneq ($(KERNELRELEASE),) include Kbuild" original era vestigial
+# (el kernel lee drm/Kbuild directamente) y rompia el build bajo DKMS, que pasa
+# KERNELRELEASE=<ver> en la linea de comandos.
 
-ifneq ($(KERNELRELEASE),)
-include Kbuild
-
-else
-
-# kbuild against specified or current kernel
 ifeq ($(KVER),)
 	KVER := $(shell uname -r)
 endif
@@ -31,7 +28,4 @@ clean: FORCE
 
 FORCE:
 
-.phony: default drm clean FORCE
-
-endif
-
+.PHONY: default drm clean FORCE
