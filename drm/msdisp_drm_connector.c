@@ -24,6 +24,8 @@
 #include <drm/drm_probe_helper.h>
 #endif
 
+#include <drm/drm_print.h>
+
 #include "msdisp_drm_drv.h"
 #include "msdisp_drm_connector.h"
 #include "msdisp_usb_interface.h"

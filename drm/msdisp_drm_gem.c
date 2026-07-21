@@ -25,6 +25,7 @@
 #if KERNEL_VERSION(5, 16, 0) <= LINUX_VERSION_CODE
 #include <drm/drm_prime.h>
 #include <drm/drm_file.h>
+#include <drm/drm_print.h>
 #elif KERNEL_VERSION(5, 5, 0) <= LINUX_VERSION_CODE || defined(EL8)
 #else
 #include <drm/drmP.h>
@@ -409,7 +410,10 @@ int msdisp_drm_gem_mmap_offset(struct drm_file *file,
 	struct drm_gem_object *obj;
 	int ret = 0;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(7, 0, 0)
+	/* struct_mutex was removed from drm_device in 7.0; GEM has internal locking */
 	mutex_lock(&dev->struct_mutex);
+#endif
 	obj = drm_gem_object_lookup(file, handle);
 	if (obj == NULL) {
 		ret = -ENOENT;
@@ -430,7 +434,9 @@ int msdisp_drm_gem_mmap_offset(struct drm_file *file,
  out:
 	drm_gem_object_put(&gobj->base);
  unlock:
+#if LINUX_VERSION_CODE < KERNEL_VERSION(7, 0, 0)
 	mutex_unlock(&dev->struct_mutex);
+#endif
 	return ret;
 }
 
@@ -473,7 +479,11 @@ struct drm_gem_object *msdisp_drm_prime_import_sg_table(struct drm_device *dev,
 		return ERR_CAST(obj);
 
 	npages = DIV_ROUND_UP(attach->dmabuf->size, PAGE_SIZE);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(7, 0, 0)
 	DRM_DEBUG_PRIME("Importing %d pages\n", npages);
+#else
+	drm_dbg_prime(dev, "Importing %d pages\n", npages);
+#endif
 	obj->pages = kvmalloc_array(npages, sizeof(struct page *), GFP_KERNEL);
 	if (!obj->pages) {
 		msdisp_drm_gem_free_object(&obj->base);

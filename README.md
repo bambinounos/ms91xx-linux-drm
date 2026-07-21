@@ -3,7 +3,7 @@
 Linux DRM driver for **MacroSilicon MS9132 / MS9133 / MS9135** USB display chips
 (`lsusb`: **`345f:9132` / `345f:9133` "MS USB Video"**), based on MacroSilicon's
 **official GPL-2.0 source code**, fixed to build and run on **modern kernels
-(6.8 → 6.17+)** and packaged for **DKMS**.
+(6.8 → 7.0+)** and packaged for **DKMS**.
 
 These chips power countless **brandless "lightweight" portable USB monitors** and
 **Chinese dual-screen / tri-screen laptop extenders** sold on AliExpress, Temu,
@@ -74,6 +74,7 @@ compositors silently ignore the device. All fixes are guarded with
 | `from_timer()` → `timer_container_of()`, `del_timer()` → `timer_delete()` | ≥ 6.16 / 6.2 |
 | `.date` removed from `struct drm_driver`; PRIME fd/handle hooks now core defaults | ≥ 6.14 / 6.6 |
 | `drm_legacy.h` deleted; missing `vmalloc.h` / `scatterlist.h` includes | ≥ 6.8 |
+| `struct_mutex` removed from `drm_device` (GEM locking is internal); explicit `drm_print.h` includes; `DRM_DEBUG_PRIME` → `drm_dbg_prime()` | ≥ 7.0 |
 | Makefiles: removed vestigial `KERNELRELEASE`/`include Kbuild` branch that **broke DKMS builds**; `$(PWD)` → `$(CURDIR)`; added `dkms.conf` | all |
 
 The protocol/init logic is **untouched** — it is exactly the manufacturer's code.
