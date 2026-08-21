@@ -219,10 +219,14 @@ msdisp_drm_detect(struct drm_connector *connector, __always_unused bool force)
         msdisp_connector->edid = drm_do_get_edid(connector, msdisp_drm_get_edid_block, pipeline);
 #endif
 	    if (!msdisp_connector->edid) {
-            DRM_ERROR("get edid failed!\n");
-		    return connector_status_disconnected;
+            /* VGA monitors/cables without DDC never return EDID; the chip's
+             * own HPD sense already told us something is physically plugged
+             * in (status==connected above), so don't force disconnected here
+             * -- fall through and let custom_mode-derived CEA VIC modes
+             * (added unconditionally in msdisp_drm_get_modes) drive it. */
+            DRM_ERROR("get edid failed! (continuing without EDID, using custom_mode if set)\n");
         }
-    } 
+    }
 
     msdisp_connector->status = status;
 
