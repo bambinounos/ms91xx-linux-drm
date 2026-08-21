@@ -192,10 +192,14 @@ msdisp_drm_detect(struct drm_connector *connector, __always_unused bool force)
             kfree(msdisp_connector->edid);
         }
 
-#if KERNEL_VERSION(6, 13, 0) <= LINUX_VERSION_CODE
+#if KERNEL_VERSION(6, 12, 0) <= LINUX_VERSION_CODE
         /* drm_do_get_edid() was removed in 6.13; read via drm_edid and
          * keep a raw copy so the rest of the driver (kfree/add_modes)
          * works unchanged.
+         *
+         * Debian's 6.12.101+deb13 backports the 6.13 EDID API (drm_edid_read_custom
+         * exists, drm_do_get_edid does not) while still reporting LINUX_VERSION_CODE
+         * as 6.12, so the upstream >=6.13 guard misses it. Lowered to 6.12 here.
          */
         {
             const struct drm_edid *drm_edid;
