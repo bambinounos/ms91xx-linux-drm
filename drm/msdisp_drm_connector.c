@@ -99,6 +99,22 @@ static int msdisp_drm_add_modes_by_cea_vic(struct drm_connector* connector)
 		if (!mode) {
 			continue;
 		}
+		/* This dongle drives a DDC-less VGA display: any EDID we do
+		 * manage to read (see msdisp_drm_get_modes) is unreliable --
+		 * observed to succeed on some boots and fail on others,
+		 * apparently a chip-internal generic/canned EDID rather than
+		 * anything from the actual monitor. When it "succeeds" its
+		 * declared established-timings (e.g. 800x600@60) get added as
+		 * the preferred mode ahead of these, and the chip's own
+		 * mode-mapper then maps that unconfigured request to an
+		 * unrelated internal VIC, producing an invalid signal (no
+		 * image). Force the first configured custom mode preferred so
+		 * fbdev always deterministically picks a mode we know this
+		 * chip can actually output, regardless of whether the flaky
+		 * EDID read happens to succeed this boot. */
+		if (i == 0) {
+			mode->type |= DRM_MODE_TYPE_PREFERRED;
+		}
 		drm_mode_probed_add(connector, mode);
 		cnt++;
 	}
@@ -117,13 +133,21 @@ static int msdisp_drm_get_modes(struct drm_connector *connector)
 					connector);
 
 	drm_connector_update_edid_property(connector, msdisp_connector->edid);
-	if (msdisp_connector->edid) {
-        cnt = drm_add_edid_modes(connector, msdisp_connector->edid);
-		vic_cnt = msdisp_drm_add_modes_by_cea_vic(connector);
-        //dev_info(connector->dev->dev, "add %d edid modes %d vic modes\n", cnt, vic_cnt);
-		return cnt + vic_cnt;
-    }
-	return 0;
+	cnt = 0;
+	/* Deliberately NOT calling drm_add_edid_modes() here even when
+	 * msdisp_connector->edid is non-NULL: this monitor/cable has no real
+	 * DDC, but the read via msdisp_drm_get_edid_block() has been observed
+	 * to intermittently "succeed" anyway (chip-internal canned EDID,
+	 * timing-dependent across boots) rather than reliably failing. When
+	 * it does, its established-timings modes (e.g. 800x600@60) get added
+	 * and can outrank/coexist with the custom_mode list below, and the
+	 * chip's own mode-mapper then maps that unconfigured resolution to
+	 * an unrelated internal VIC on modeset, producing an invalid signal
+	 * (no image on the physical monitor) instead of a hard failure. Only
+	 * ever trust the custom_mode-derived CEA VIC list, which is known to
+	 * match timings this chip can actually output. */
+	vic_cnt = msdisp_drm_add_modes_by_cea_vic(connector);
+	return cnt + vic_cnt;
 }
 
 static enum drm_mode_status msdisp_drm_mode_valid(struct drm_connector *connector,
