@@ -52,10 +52,43 @@ static const struct vm_operations_struct msdisp_drm_gem_vm_ops = {
 	.close = drm_gem_vm_close,
 };
 
+#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
+/* No driver .vmap/.vunmap was ever wired up, which drm_client_buffer_vmap()
+ * (used by fbdev emulation, see msdisp_drm_fbdev_probe() in msdisp_drm_fb.c)
+ * needs. Wrap the existing msdisp_drm_gem_vmap()/vunmap() -- already used
+ * for real scanout in msdisp_drm_modeset.c -- in the standard
+ * struct iosys_map signature. */
+static int msdisp_drm_gem_object_vmap(struct drm_gem_object *obj, struct iosys_map *map)
+{
+	struct msdisp_drm_gem_object *bo = to_msdisp_drm_bo(obj);
+	int ret;
+
+	ret = msdisp_drm_gem_vmap(bo);
+	if (ret)
+		return ret;
+
+	if (bo->vmap_is_iomem)
+		iosys_map_set_vaddr_iomem(map, bo->vmapping);
+	else
+		iosys_map_set_vaddr(map, bo->vmapping);
+
+	return 0;
+}
+
+static void msdisp_drm_gem_object_vunmap(struct drm_gem_object *obj, struct iosys_map *map)
+{
+	msdisp_drm_gem_vunmap(to_msdisp_drm_bo(obj));
+}
+#endif
+
 static struct drm_gem_object_funcs gem_obj_funcs = {
 	.free = msdisp_drm_gem_free_object,
 	.pin = msdisp_drm_prime_pin,
 	.unpin = msdisp_drm_prime_unpin,
+#if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
+	.vmap = msdisp_drm_gem_object_vmap,
+	.vunmap = msdisp_drm_gem_object_vunmap,
+#endif
 	.vm_ops = &msdisp_drm_gem_vm_ops,
 	.export = drm_gem_prime_export,
 	.get_sg_table = msdisp_drm_prime_get_sg_table,

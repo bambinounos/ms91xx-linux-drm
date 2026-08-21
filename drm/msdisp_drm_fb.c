@@ -15,6 +15,7 @@
 
 #include <linux/slab.h>
 #include <linux/dma-buf.h>
+#include <linux/vmalloc.h>
 #include <linux/version.h>
 #if KERNEL_VERSION(5, 5, 0) <= LINUX_VERSION_CODE || defined(EL8)
 #else
@@ -226,3 +227,194 @@ struct drm_framebuffer *msdisp_drm_fb_user_fb_create(
 	drm_gem_object_put(obj);
 	return ERR_PTR(-EINVAL);
 }
+
+#if KERNEL_VERSION(6, 10, 0) <= LINUX_VERSION_CODE
+/* drm_client_setup()/drm_fbdev_client_setup() (called from
+ * msdisp_drm_device_create() in msdisp_drm_drv.c on 6.10+ kernels) requires
+ * dev->driver->fbdev_probe to be set -- the vendor driver never implemented
+ * this, so drm_fb_helper_single_fb_probe() fell through with an
+ * uninitialized `ret`, leaving fb_helper->fb NULL, and then unconditionally
+ * did strcpy(fb_helper->fb->comm, "[fbcon]"), a NULL deref. This is a
+ * from-scratch implementation modeled on the upstream drm_fbdev_dma.c /
+ * drm_fbdev_shmem.c "shadowed" fbdev_probe (those aren't usable directly:
+ * msdisp's GEM objects aren't drm_gem_dma/shmem_helper objects, they're a
+ * custom type -- see struct msdisp_drm_gem_object). Since our fb always has
+ * ->funcs->dirty set (msdisp_drm_fb.c's msdisp_drmfb_funcs), we always take
+ * the deferred/shadowed path: fbcon draws into a plain vzalloc'd shadow
+ * buffer, and on damage we blit that into the real scanout buffer (vmapped
+ * via the new gem_obj_funcs.vmap/.vunmap in msdisp_drm_gem.c) and invoke
+ * fb->funcs->dirty() to push it out over USB. */
+
+static int msdisp_fbdev_fb_open(struct fb_info *info, int user)
+{
+	struct drm_fb_helper *fb_helper = info->par;
+
+	if (user && !try_module_get(fb_helper->dev->driver->fops->owner))
+		return -ENODEV;
+
+	return 0;
+}
+
+static int msdisp_fbdev_fb_release(struct fb_info *info, int user)
+{
+	struct drm_fb_helper *fb_helper = info->par;
+
+	if (user)
+		module_put(fb_helper->dev->driver->fops->owner);
+
+	return 0;
+}
+
+static void msdisp_fbdev_fb_destroy(struct fb_info *info)
+{
+	struct drm_fb_helper *fb_helper = info->par;
+	void *shadow = info->screen_buffer;
+
+	if (!fb_helper->dev)
+		return;
+
+	if (info->fbdefio)
+		fb_deferred_io_cleanup(info);
+	drm_fb_helper_fini(fb_helper);
+	vfree(shadow);
+
+	drm_client_buffer_vunmap(fb_helper->buffer);
+	drm_client_framebuffer_delete(fb_helper->buffer);
+	drm_client_release(&fb_helper->client);
+	drm_fb_helper_unprepare(fb_helper);
+	kfree(fb_helper);
+}
+
+FB_GEN_DEFAULT_DEFERRED_SYSMEM_OPS(msdisp_fbdev,
+				   drm_fb_helper_damage_range,
+				   drm_fb_helper_damage_area);
+
+static const struct fb_ops msdisp_fbdev_fb_ops = {
+	.owner = THIS_MODULE,
+	.fb_open = msdisp_fbdev_fb_open,
+	.fb_release = msdisp_fbdev_fb_release,
+	FB_DEFAULT_DEFERRED_OPS(msdisp_fbdev),
+	DRM_FB_HELPER_DEFAULT_OPS,
+	.fb_destroy = msdisp_fbdev_fb_destroy,
+};
+
+static int msdisp_fbdev_helper_fb_dirty(struct drm_fb_helper *fb_helper,
+					struct drm_clip_rect *clip)
+{
+	struct drm_device *dev = fb_helper->dev;
+	struct drm_framebuffer *fb = fb_helper->fb;
+	struct iosys_map dst = fb_helper->buffer->map;
+	size_t offset;
+	size_t len;
+	unsigned int y;
+	void *src;
+	int ret;
+
+	if (!(clip->x1 < clip->x2 && clip->y1 < clip->y2))
+		return 0;
+
+	offset = clip->y1 * fb->pitches[0] + clip->x1 * fb->format->cpp[0];
+	len = (clip->x2 - clip->x1) * fb->format->cpp[0];
+	src = fb_helper->info->screen_buffer + offset;
+	iosys_map_incr(&dst, offset);
+
+	for (y = clip->y1; y < clip->y2; y++) {
+		iosys_map_memcpy_to(&dst, 0, src, len);
+		iosys_map_incr(&dst, fb->pitches[0]);
+		src += fb->pitches[0];
+	}
+
+	if (fb->funcs->dirty) {
+		ret = fb->funcs->dirty(fb, NULL, 0, 0, clip, 1);
+		if (drm_WARN_ONCE(dev, ret, "msdisp fbdev: dirty helper failed: ret=%d\n", ret))
+			return ret;
+	}
+
+	return 0;
+}
+
+static const struct drm_fb_helper_funcs msdisp_fbdev_helper_funcs = {
+	.fb_dirty = msdisp_fbdev_helper_fb_dirty,
+};
+
+int msdisp_drm_fbdev_probe(struct drm_fb_helper *fb_helper,
+			   struct drm_fb_helper_surface_size *sizes)
+{
+	struct drm_client_dev *client = &fb_helper->client;
+	struct drm_device *dev = fb_helper->dev;
+	struct drm_client_buffer *buffer;
+	struct drm_framebuffer *fb;
+	struct fb_info *info;
+	struct iosys_map map;
+	void *shadow;
+	size_t screen_size;
+	u32 format;
+	int ret;
+
+	drm_dbg_kms(dev, "surface width(%d), height(%d) and bpp(%d)\n",
+		    sizes->surface_width, sizes->surface_height,
+		    sizes->surface_bpp);
+
+	format = drm_driver_legacy_fb_format(dev, sizes->surface_bpp, sizes->surface_depth);
+	buffer = drm_client_framebuffer_create(client, sizes->surface_width,
+					       sizes->surface_height, format);
+	if (IS_ERR(buffer))
+		return PTR_ERR(buffer);
+
+	fb = buffer->fb;
+
+	ret = drm_client_buffer_vmap(buffer, &map);
+	if (ret)
+		goto err_drm_client_framebuffer_delete;
+	if (drm_WARN_ON(dev, map.is_iomem)) {
+		ret = -ENODEV;
+		goto err_drm_client_buffer_vunmap;
+	}
+
+	fb_helper->funcs = &msdisp_fbdev_helper_funcs;
+	fb_helper->buffer = buffer;
+	fb_helper->fb = fb;
+
+	info = drm_fb_helper_alloc_info(fb_helper);
+	if (IS_ERR(info)) {
+		ret = PTR_ERR(info);
+		goto err_drm_client_buffer_vunmap;
+	}
+
+	drm_fb_helper_fill_info(info, fb_helper, sizes);
+
+	screen_size = buffer->gem->size;
+	shadow = vzalloc(screen_size);
+	if (!shadow) {
+		ret = -ENOMEM;
+		goto err_drm_fb_helper_release_info;
+	}
+
+	info->fbops = &msdisp_fbdev_fb_ops;
+	info->flags |= FBINFO_VIRTFB | FBINFO_READS_FAST;
+	info->screen_buffer = shadow;
+	info->fix.smem_len = screen_size;
+
+	fb_helper->fbdefio.delay = HZ / 20;
+	fb_helper->fbdefio.deferred_io = drm_fb_helper_deferred_io;
+	info->fbdefio = &fb_helper->fbdefio;
+
+	ret = fb_deferred_io_init(info);
+	if (ret)
+		goto err_vfree;
+
+	return 0;
+
+err_vfree:
+	vfree(shadow);
+err_drm_fb_helper_release_info:
+	drm_fb_helper_release_info(fb_helper);
+err_drm_client_buffer_vunmap:
+	fb_helper->fb = NULL;
+	fb_helper->buffer = NULL;
+	drm_client_buffer_vunmap(buffer);
+err_drm_client_framebuffer_delete:
+	drm_client_framebuffer_delete(buffer);
+	return ret;
+}
+#endif
