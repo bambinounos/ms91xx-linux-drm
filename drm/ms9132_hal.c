@@ -159,9 +159,10 @@ struct msdisp_usb_hal_funcs ms9132_hal_funcs = {
 
 struct msdisp_usb_hal_funcs* msdisp_usb_find_usb_hal(const struct usb_device_id *id)
 {
-    if (((id->idVendor == ms9132_id.idVendor) && (id->idProduct == ms9132_id.idProduct)) 
+    if (((id->idVendor == ms9132_id.idVendor) && (id->idProduct == ms9132_id.idProduct))
             || ((id->idVendor == ms9133_id.idVendor) && (id->idProduct == ms9133_id.idProduct))
-            || ((id->idVendor == ms9135_id.idVendor) && (id->idProduct == ms9135_id.idProduct))) {
+            || ((id->idVendor == ms9135_id.idVendor) && (id->idProduct == ms9135_id.idProduct))
+            || ((id->idVendor == ms6021_id.idVendor) && (id->idProduct == ms6021_id.idProduct))) {
 
         return &ms9132_hal_funcs;
     }
