@@ -332,4 +332,5 @@ static struct usb_driver msdisp_usb_drv = {
 module_usb_driver(msdisp_usb_drv);
 
 MODULE_VERSION(MOD_VER);
+MODULE_DESCRIPTION("MacroSilicon USB Display USB Driver");
 MODULE_LICENSE("GPL");

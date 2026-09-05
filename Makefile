@@ -20,11 +20,11 @@ default: drm FORCE
 
 drm: FORCE
 	@echo "drm build"
-	$(MAKE) -C $(DRM_PATH)
+	$(MAKE) -C "$(DRM_PATH)"
 
 clean: FORCE
-	$(MAKE) -C $(HAL_PATH) clean
-	$(MAKE) -C $(DRM_PATH) clean
+	$(MAKE) -C "$(HAL_PATH)" clean
+	$(MAKE) -C "$(DRM_PATH)" clean
 
 FORCE:
 

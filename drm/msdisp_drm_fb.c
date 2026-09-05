@@ -17,6 +17,7 @@
 #include <linux/dma-buf.h>
 #include <linux/vmalloc.h>
 #include <linux/version.h>
+#include <drm/drm_print.h>
 #if KERNEL_VERSION(5, 5, 0) <= LINUX_VERSION_CODE || defined(EL8)
 #else
 #include <drm/drmP.h>
@@ -279,10 +280,15 @@ static void msdisp_fbdev_fb_destroy(struct fb_info *info)
 	vfree(shadow);
 
 	drm_client_buffer_vunmap(fb_helper->buffer);
+#if KERNEL_VERSION(6, 18, 0) <= LINUX_VERSION_CODE
+	drm_client_buffer_delete(fb_helper->buffer);
+	drm_client_release(&fb_helper->client);
+#else
 	drm_client_framebuffer_delete(fb_helper->buffer);
 	drm_client_release(&fb_helper->client);
 	drm_fb_helper_unprepare(fb_helper);
 	kfree(fb_helper);
+#endif
 }
 
 FB_GEN_DEFAULT_DEFERRED_SYSMEM_OPS(msdisp_fbdev,
@@ -356,8 +362,13 @@ int msdisp_drm_fbdev_probe(struct drm_fb_helper *fb_helper,
 		    sizes->surface_bpp);
 
 	format = drm_driver_legacy_fb_format(dev, sizes->surface_bpp, sizes->surface_depth);
+#if KERNEL_VERSION(6, 18, 0) <= LINUX_VERSION_CODE
+	buffer = drm_client_buffer_create_dumb(client, sizes->surface_width,
+					       sizes->surface_height, format);
+#else
 	buffer = drm_client_framebuffer_create(client, sizes->surface_width,
 					       sizes->surface_height, format);
+#endif
 	if (IS_ERR(buffer))
 		return PTR_ERR(buffer);
 
@@ -365,7 +376,7 @@ int msdisp_drm_fbdev_probe(struct drm_fb_helper *fb_helper,
 
 	ret = drm_client_buffer_vmap(buffer, &map);
 	if (ret)
-		goto err_drm_client_framebuffer_delete;
+		goto err_drm_client_buffer_delete;
 	if (drm_WARN_ON(dev, map.is_iomem)) {
 		ret = -ENODEV;
 		goto err_drm_client_buffer_vunmap;
@@ -375,11 +386,15 @@ int msdisp_drm_fbdev_probe(struct drm_fb_helper *fb_helper,
 	fb_helper->buffer = buffer;
 	fb_helper->fb = fb;
 
+#if KERNEL_VERSION(6, 18, 0) <= LINUX_VERSION_CODE
+	info = fb_helper->info;
+#else
 	info = drm_fb_helper_alloc_info(fb_helper);
 	if (IS_ERR(info)) {
 		ret = PTR_ERR(info);
 		goto err_drm_client_buffer_vunmap;
 	}
+#endif
 
 	drm_fb_helper_fill_info(info, fb_helper, sizes);
 
@@ -408,13 +423,19 @@ int msdisp_drm_fbdev_probe(struct drm_fb_helper *fb_helper,
 err_vfree:
 	vfree(shadow);
 err_drm_fb_helper_release_info:
+#if KERNEL_VERSION(6, 18, 0) > LINUX_VERSION_CODE
 	drm_fb_helper_release_info(fb_helper);
+#endif
 err_drm_client_buffer_vunmap:
 	fb_helper->fb = NULL;
 	fb_helper->buffer = NULL;
 	drm_client_buffer_vunmap(buffer);
-err_drm_client_framebuffer_delete:
+err_drm_client_buffer_delete:
+#if KERNEL_VERSION(6, 18, 0) <= LINUX_VERSION_CODE
+	drm_client_buffer_delete(buffer);
+#else
 	drm_client_framebuffer_delete(buffer);
+#endif
 	return ret;
 }
 #endif

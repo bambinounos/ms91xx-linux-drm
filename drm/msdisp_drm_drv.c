@@ -32,7 +32,11 @@
 #endif
 #include <drm/drm_atomic_helper.h>
 #if KERNEL_VERSION(6, 10, 0) <= LINUX_VERSION_CODE
+#if __has_include(<drm/clients/drm_client_setup.h>)
+#include <drm/clients/drm_client_setup.h>
+#elif __has_include(<drm/drm_client_setup.h>)
 #include <drm/drm_client_setup.h>
+#endif
 #else
 #include <drm/drm_fbdev_generic.h>
 #endif

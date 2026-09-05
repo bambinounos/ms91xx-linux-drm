@@ -264,4 +264,5 @@ module_init(msdisp_init);
 module_exit(msdisp_exit);
 
 MODULE_VERSION(MOD_VER);
+MODULE_DESCRIPTION("MacroSilicon USB Display DRM Driver");
 MODULE_LICENSE("GPL");

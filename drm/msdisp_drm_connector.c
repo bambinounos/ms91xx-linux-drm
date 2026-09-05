@@ -126,27 +126,21 @@ out:
 
 static int msdisp_drm_get_modes(struct drm_connector *connector)
 {
-    int cnt, vic_cnt;
+    int cnt = 0, vic_cnt = 0;
 	struct msdisp_drm_connector *msdisp_connector =
 					container_of(connector,
 					struct msdisp_drm_connector,
 					connector);
 
 	drm_connector_update_edid_property(connector, msdisp_connector->edid);
-	cnt = 0;
-	/* Deliberately NOT calling drm_add_edid_modes() here even when
-	 * msdisp_connector->edid is non-NULL: this monitor/cable has no real
-	 * DDC, but the read via msdisp_drm_get_edid_block() has been observed
-	 * to intermittently "succeed" anyway (chip-internal canned EDID,
-	 * timing-dependent across boots) rather than reliably failing. When
-	 * it does, its established-timings modes (e.g. 800x600@60) get added
-	 * and can outrank/coexist with the custom_mode list below, and the
-	 * chip's own mode-mapper then maps that unconfigured resolution to
-	 * an unrelated internal VIC on modeset, producing an invalid signal
-	 * (no image on the physical monitor) instead of a hard failure. Only
-	 * ever trust the custom_mode-derived CEA VIC list, which is known to
-	 * match timings this chip can actually output. */
 	vic_cnt = msdisp_drm_add_modes_by_cea_vic(connector);
+	/* When custom_mode is configured (vic_cnt > 0), trust only the custom
+	 * CEA VIC list to prevent flaky/canned EDIDs on DDC-less displays
+	 * from overriding it. When custom_mode is not set, add standard EDID
+	 * modes so standard MS9132/9133 HDMI panels work properly. */
+	if (vic_cnt == 0 && msdisp_connector->edid) {
+		cnt = drm_add_edid_modes(connector, msdisp_connector->edid);
+	}
 	return cnt + vic_cnt;
 }
 
