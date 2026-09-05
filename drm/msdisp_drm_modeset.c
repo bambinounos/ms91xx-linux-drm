@@ -253,17 +253,17 @@ msdisp_crtc_cursor_set(struct drm_crtc *crtc, struct drm_file *file_priv,
 	void *vmapping;
 	struct msdisp_usb_hal* usb_hal;
 	struct drm_gem_object *obj;
-	struct page **pages;
+	struct msdisp_drm_gem_object *bo;
 	struct msdisp_drm_pipeline* pipeline = get_pipeline_by_crtc(crtc);
+	u8 *cursor_buf = NULL;
+	int y;
 
 	if (!pipeline) {
-		//printk("msdisp: set cursor no pipeline.\n");
 		return ret;
 	}
 
 	usb_hal = pipeline->usb_hal;
 	if (!usb_hal) {
-		//printk("msdisp: set cursor usb_hal is null.\n");
 		return ret;
 	}
 	if (buffer_handle == 0) {
@@ -271,30 +271,54 @@ msdisp_crtc_cursor_set(struct drm_crtc *crtc, struct drm_file *file_priv,
 		return 0;
 	}
 
-	/* Currently we only support 64x64 cursors */
-	if (width != 64 || height != 64) {
-		printk("We currently only support 64x64 cursors :%dx%d\n", width, height);
+	/* Support any cursor size up to 64x64 (e.g. 24x24, 32x32, 48x48, 64x64) */
+	if (width > 64 || height > 64 || width == 0 || height == 0) {
+		printk("Cursor size %dx%d exceeds supported max 64x64\n", width, height);
 		return -EINVAL;
 	}
 
 	obj = drm_gem_object_lookup(file_priv, buffer_handle);
 	if (!obj) {
-		goto unlock;
+		return -ENOENT;
 	}
 
-	if (obj->size == 0 || obj->size < width * height * 4) {
-		printk("Buffer is too small\n");
-		goto unlock;
+	if (obj->size < width * height * 4) {
+		printk("Cursor buffer is too small: size=%zu < %u\n", obj->size, width * height * 4);
+		ret = -EINVAL;
+		goto out_put;
 	}
 
-	pages = drm_gem_get_pages(obj);
-	vmapping = vmap(pages, 4, 0, PAGE_KERNEL);
+	bo = to_msdisp_drm_bo(obj);
+	ret = msdisp_drm_gem_vmap(bo);
+	if (ret) {
+		goto out_put;
+	}
+	vmapping = bo->vmapping;
+	if (!vmapping) {
+		ret = -ENOMEM;
+		goto out_vunmap;
+	}
 
-	usb_hal->funcs->cursor_set(usb_hal, vmapping);
-	vunmap(vmapping);
-	kvfree(pages);
+	if (width == 64 && height == 64) {
+		usb_hal->funcs->cursor_set(usb_hal, vmapping);
+	} else {
+		/* Pad smaller cursor into 64x64 transparent buffer so hardware blitter works */
+		cursor_buf = kzalloc(64 * 64 * 4, GFP_KERNEL);
+		if (!cursor_buf) {
+			ret = -ENOMEM;
+			goto out_vunmap;
+		}
+		for (y = 0; y < height; y++) {
+			memcpy(cursor_buf + y * 64 * 4, (u8 *)vmapping + y * width * 4, width * 4);
+		}
+		usb_hal->funcs->cursor_set(usb_hal, cursor_buf);
+		kfree(cursor_buf);
+	}
 
-unlock:
+out_vunmap:
+	msdisp_drm_gem_vunmap(bo);
+out_put:
+	drm_gem_object_put(obj);
 	return ret;
 }
 
@@ -382,7 +406,11 @@ static void msdisp_drm_plane_atomic_update(struct drm_plane *plane,
 		return;
 	}
 
-	fb = old_state->fb;
+	/* Use the newly committed framebuffer from plane->state->fb, NOT
+	 * old_state->fb. Using old_state caused every screen update to be
+	 * 1 frame behind (input lag / delayed typing) and broke initial frame
+	 * display on resume/modeset when old_state->fb was NULL. */
+	fb = plane->state->fb;
 	if (!fb) {
 		stat->no_fb++;
 		return;

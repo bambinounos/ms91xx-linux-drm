@@ -30,6 +30,7 @@
 
 #include <drm/drm_device.h>
 #include <drm/drm_modeset_helper.h>
+#include <drm/drm_probe_helper.h>
 #include <drm/drm_file.h>
 #include <drm/drm_fourcc.h>
 
@@ -155,7 +156,13 @@ static int msdisp_usb_reset_resume(struct usb_interface *interface)
     struct msdisp_usb_device* usb_dev = usb_get_intfdata(interface);
 	int ret;
 	
+	if (usb_dev && usb_dev->hal) {
+		usb_hal_resume_gpio(usb_dev->hal);
+	}
 	ret = drm_mode_config_helper_resume(usb_dev->drm);
+	if (usb_dev && usb_dev->drm) {
+		drm_kms_helper_hotplug_event(usb_dev->drm);
+	}
 	dev_info(&usb_dev->udev->dev, "reset resume!ret =%d\n", ret);
 	return ret;
 }
@@ -250,6 +257,8 @@ static int msdisp_usb_probe(struct usb_interface *interface,
 			dev_err(&udev->dev, "create syslink failed!ret=%d\n", ret);
 		}
 	}
+
+	drm_kms_helper_hotplug_event(usb_dev->drm);
 	
     return 0;
 
@@ -271,6 +280,9 @@ static void msdisp_usb_disconnect(struct usb_interface *interface)
 	obj = msdisp_drm_get_pipeline_kobject(usb_dev->drm, usb_dev->pipeline_index);
 	if (obj) {
 		sysfs_remove_link(obj, "usb_dev");
+	}
+	if (usb_dev && usb_dev->drm) {
+		drm_kms_helper_hotplug_event(usb_dev->drm);
 	}
 }
 

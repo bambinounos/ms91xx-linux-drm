@@ -87,6 +87,9 @@ compositors silently ignore the device. All fixes are guarded with
 | `drm_do_get_edid()` guard lowered to ≥ 6.12 — Debian's `6.12.101+deb13` backports the 6.13 EDID API while still reporting 6.12, so the build failed | ≥ 6.12 (Debian) |
 | `.fbdev_probe` implemented + GEM `.vmap`/`.vunmap` + `drm_client_setup()` (adapted for `drm_client_buffer_create_dumb()` and pre-allocated `fb_info` on 7.0+) — provides `/dev/fb0` and text console support | ≥ 6.10 |
 | `534d:6021` added to all three ID lookup tables; `port_type=` override; `custom_mode=` modes honoured with EDID fallback for standard HDMI — see [docs/MS912C-VGA.md](docs/MS912C-VGA.md) | all |
+| Plane atomic update fix: uses `plane->state->fb` instead of `old_state->fb` — resolves 1-frame delayed screen updates (input lag when typing) and black screen on resume | all |
+| Wayland mouse cursor fix: supports cursor sizes ≤ 64×64 (24×24, 32×32, 48×48) with transparent padding and fixes GEM refcount leak — cursor now visible in GNOME Wayland | all |
+| Hotplug uevents: `drm_kms_helper_hotplug_event()` triggered on probe, disconnect, and reset-resume so compositors immediately detect and repaint the display | all |
 
 The protocol/init logic is **untouched** — it is exactly the manufacturer's code.
 
