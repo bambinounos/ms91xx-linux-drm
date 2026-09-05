@@ -25,6 +25,20 @@
 
 #define CHAR_RANGE(a) (a<0?0:(a>255?255:a))
 
+/* How often we force a full-frame resend even when nothing has changed and the
+ * mouse hasn't moved. This is a defensive "in case an update got missed" safety
+ * net, not something needed for correctness on this timescale (the chip's own
+ * output buffer holds its content without software-driven refreshing). Confirmed
+ * via dmesg that this fires reliably every ~2.5s even with the secondary screen
+ * completely idle, and that periodic burst is a plausible contributor to audio
+ * stutter observed even at idle (separate from, and in addition to, the KWin-side
+ * continuous-repaint bug fixed elsewhere). Tunable via modprobe.d without a
+ * rebuild per test value.
+ */
+static uint usb_hal_idle_refresh_ms = 2500;
+module_param_named(idle_refresh_ms, usb_hal_idle_refresh_ms, uint, 0644);
+MODULE_PARM_DESC(idle_refresh_ms, "Forced full-frame resend interval in ms when idle (default: 2500)");
+
 struct usb_hal_api_context {
 	struct completion	done;
 	int			status;
@@ -398,6 +412,7 @@ static int usb_hal_dev_send_frame(struct usb_hal_dev* usb_dev, struct urb* data_
 	mutex_lock(&usb_dev->usb_buf.mutex);
 	usb_hal_update_change_rects(usb_dev);
 	if (usb_dev->rect[usb_dev->frame_index].left >= usb_dev->rect[usb_dev->frame_index].right) {
+			usb_dev->stat.empty_rect_skip++;
 			mutex_unlock(&usb_dev->usb_buf.mutex);
 			return -1;
 	}
@@ -408,22 +423,61 @@ static int usb_hal_dev_send_frame(struct usb_hal_dev* usb_dev, struct urb* data_
 	mutex_unlock(&usb_dev->usb_buf.mutex);
 
 	start_time = ktime_get();
-	usb_fill_bulk_urb(data_urb, udev, usb_sndbulkpipe(udev, ep), usb_dev->usb_buf.buf, usb_dev->usb_buf.len,
-			usb_hal_api_blocking_completion, NULL);
-		
-	if ((USB_HAL_BUF_TYPE_USB == usb_dev->usb_buf.type ) || (USB_HAL_BUF_TYPE_DMA == usb_dev->usb_buf.type)) {
-		data_urb->transfer_dma = usb_dev->usb_buf.dma_addr;
-		data_urb->transfer_flags |= URB_NO_TRANSFER_DMA_MAP;
-	} else if (USB_HAL_BUF_TYPE_VMALLOC == usb_dev->usb_buf.type) {
-		data_urb->num_sgs = usb_dev->usb_buf.sgt->orig_nents;
-		data_urb->sg = usb_dev->usb_buf.sgt->sgl; 
+
+	if ((USB_HAL_BUF_TYPE_USB == usb_dev->usb_buf.type) || (USB_HAL_BUF_TYPE_DMA == usb_dev->usb_buf.type)) {
+		/* The chip reliably stalls (-110/ETIMEDOUT on essentially every attempt)
+		 * when handed the whole ~1.2MB frame as a single bulk URB. A USB capture
+		 * of the vendor Windows driver shows it splitting each frame into 64KB
+		 * chunks instead, submitted back-to-back -- almost certainly this
+		 * chip's actual internal transfer limit. usb_buf is a single
+		 * physically-contiguous usb_alloc_coherent() allocation for these two
+		 * buffer types, so chunking is just a plain offset walk, no
+		 * scatter-gather needed. */
+		const unsigned int chunk_size = 64 * 1024;
+		unsigned int remaining = usb_dev->usb_buf.len;
+		unsigned int offset = 0;
+
+		while (remaining > 0) {
+			unsigned int len = remaining > chunk_size ? chunk_size : remaining;
+
+			usb_fill_bulk_urb(data_urb, udev, usb_sndbulkpipe(udev, ep), usb_dev->usb_buf.buf + offset, len,
+					usb_hal_api_blocking_completion, NULL);
+			data_urb->transfer_dma = usb_dev->usb_buf.dma_addr + offset;
+			data_urb->transfer_flags |= URB_NO_TRANSFER_DMA_MAP;
+
+			ret = usb_hal_start_wait_urb(data_urb, 2000, &snd_len);
+			if (ret) {
+				dev_err(&udev->dev, "wait urb failed!\n ret = %d (offset=%u len=%u)\n", ret, offset, len);
+				real_ret = ret;
+				break;
+			}
+			if (snd_len != len) {
+				usb_dev->stat.short_send++;
+				dev_err_ratelimited(&udev->dev,
+					"short bulk transfer! offset=%u requested=%u actual=%d\n",
+					offset, len, snd_len);
+				real_ret = -EIO;
+				break;
+			}
+			offset += len;
+			remaining -= len;
+		}
+	} else {
+		usb_fill_bulk_urb(data_urb, udev, usb_sndbulkpipe(udev, ep), usb_dev->usb_buf.buf, usb_dev->usb_buf.len,
+				usb_hal_api_blocking_completion, NULL);
+		if (USB_HAL_BUF_TYPE_VMALLOC == usb_dev->usb_buf.type) {
+			data_urb->num_sgs = usb_dev->usb_buf.sgt->orig_nents;
+			data_urb->sg = usb_dev->usb_buf.sgt->sgl;
+		}
+
+		ret = usb_hal_start_wait_urb(data_urb, 2000, &snd_len);
+		if (ret) {
+			dev_err(&udev->dev, "wait urb failed!\n ret = %d\n", ret);
+			real_ret = ret;
+		}
 	}
 
-	ret = usb_hal_start_wait_urb(data_urb, 2000, &snd_len);
-	if (ret) {
-		dev_err(&udev->dev, "wait urb failed!\n ret = %d\n", ret);
-		real_ret = ret;
-	} else {
+	if (!real_ret) {
 		usb_dev->stat.send_success++;
 	}
 
@@ -438,7 +492,15 @@ static int usb_hal_dev_send_frame(struct usb_hal_dev* usb_dev, struct urb* data_
 		dev_warn(&udev->dev, "send frame Elapsed time: %lld ms\n", elapsed_ms);
 	}
 
-	usb_dev->frame_index = ((0 == usb_dev->frame_index) ? 1 : 0);
+	if (!real_ret) {
+		/* Only advance our tracked buffer index on a genuinely successful send.
+		 * The chip's real double-buffer index only advances when it actually
+		 * receives a frame; toggling this unconditionally (including on a
+		 * failed/timed-out send) permanently desyncs our tracking from the
+		 * chip's real state until the next full disable/enable cycle, causing
+		 * subsequent partial updates to land in the wrong physical buffer. */
+		usb_dev->frame_index = ((0 == usb_dev->frame_index) ? 1 : 0);
+	}
    	//usb_dev->hal_dev->funcs->trigger_frame(usb_dev->udev, usb_dev->frame_index, 100);
 
 	usb_dev->update_time = ktime_get();
@@ -594,10 +656,10 @@ void usb_hal_state_machine(struct usb_hal_dev* usb_dev, struct urb* data_urb, un
 		} 
 
 		if (!bupdate) {
-			if ((ktime_to_ms(ktime_sub(current_time, usb_dev->update_time))) >= 2500) {
+			if ((ktime_to_ms(ktime_sub(current_time, usb_dev->update_time))) >= usb_hal_idle_refresh_ms) {
 				bupdate = true;
 				usb_hal_full_rects(usb_dev);
-			} 
+			}
 		}
 	}
 

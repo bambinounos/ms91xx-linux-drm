@@ -13,6 +13,7 @@
  */
 
 
+#include <drm/drm_print.h>
 #include <linux/sched.h>
 #include <linux/version.h>
 #if KERNEL_VERSION(5, 18, 0) <= LINUX_VERSION_CODE
@@ -76,9 +77,8 @@ static bool msdisp_drm_gem_object_use_import_attach(struct drm_gem_object *obj)
 		return false;
 	}
 
-	return true;
-	//return obj->import_attach && 
-	//       strcmp(obj->import_attach->dmabuf->owner->name, "amdgpu") != 0;
+	return obj->import_attach->dmabuf->owner &&
+	       strcmp(obj->import_attach->dmabuf->owner->name, "amdgpu") != 0;
 }
 
 uint32_t msdisp_drm_gem_object_handle_lookup(struct drm_file *filp,
@@ -314,7 +314,7 @@ int msdisp_drm_gem_vmap(struct msdisp_drm_gem_object *obj)
 #endif
 
 #if KERNEL_VERSION(5, 11, 0) <= LINUX_VERSION_CODE || defined(EL8)
-		ret = dma_buf_vmap(obj->base.import_attach->dmabuf, &map);
+		ret = dma_buf_vmap_unlocked(obj->base.import_attach->dmabuf, &map);
 		if (ret)
 			return -ENOMEM;
 		obj->vmapping = map.vaddr;
@@ -348,7 +348,7 @@ void msdisp_drm_gem_vunmap(struct msdisp_drm_gem_object *obj)
 		else
 			iosys_map_set_vaddr(&map, obj->vmapping);
 
-		dma_buf_vunmap(obj->base.import_attach->dmabuf, &map);
+		dma_buf_vunmap_unlocked(obj->base.import_attach->dmabuf, &map);
 
 #elif KERNEL_VERSION(5, 11, 0) <= LINUX_VERSION_CODE || defined(EL8)
 		struct dma_buf_map map;
@@ -358,7 +358,7 @@ void msdisp_drm_gem_vunmap(struct msdisp_drm_gem_object *obj)
 		else
 			dma_buf_map_set_vaddr(&map, obj->vmapping);
 
-		dma_buf_vunmap(obj->base.import_attach->dmabuf, &map);
+		dma_buf_vunmap_unlocked(obj->base.import_attach->dmabuf, &map);
 #else
 		dma_buf_vunmap(obj->base.import_attach->dmabuf, obj->vmapping);
 #endif
@@ -409,12 +409,9 @@ int msdisp_drm_gem_mmap_offset(struct drm_file *file,
 	struct drm_gem_object *obj;
 	int ret = 0;
 
-	mutex_lock(&dev->struct_mutex);
 	obj = drm_gem_object_lookup(file, handle);
-	if (obj == NULL) {
-		ret = -ENOENT;
-		goto unlock;
-	}
+	if (obj == NULL)
+		return -ENOENT;
 	gobj = to_msdisp_drm_bo(obj);
 
 	ret = msdisp_drm_pin_pages(gobj);
@@ -429,8 +426,6 @@ int msdisp_drm_gem_mmap_offset(struct drm_file *file,
 
  out:
 	drm_gem_object_put(&gobj->base);
- unlock:
-	mutex_unlock(&dev->struct_mutex);
 	return ret;
 }
 

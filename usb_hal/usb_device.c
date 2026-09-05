@@ -219,6 +219,7 @@ static struct video_mode  g_support_mode[] = {
     {VIC_VESA_1280X600_60, 60, 1280, 600},
     {VIC_VESA_1152X864_60, 60, 1152, 864},
     {VIC_VESA_1024x768_60, 60, 1024, 768},
+    {150, 60, 1024, 600}, /* panel's real preferred EDID mode (VIC 150 per vendor Windows config.ini), missing from stock table */
     {VIC_VESA_800X600_60, 60, 800, 600},
     {VIC_VESA_640X480_60, 60, 640, 480}
 };

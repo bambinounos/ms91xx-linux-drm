@@ -36,7 +36,23 @@
 #include "msdisp_drm_drv.h"
 #include "msdisp_plat_drv.h"
 
-#define	MSDISP_DRM_VBLANK_TIMER_OUT_MS				20
+/* How often our software vblank timer signals frame completion back to the
+ * DRM core / compositor. This is NOT itself the bottleneck for the slow
+ * cross-GPU CPU copy that KWin does on its own side before ever calling into
+ * this driver (that takes ~250-300ms and is unrelated to this value) -- but
+ * since nothing else gates how soon the compositor starts its next repaint
+ * cycle after being told "done", slowing this down directly throttles how
+ * often that disruptive copy can repeat per second. Confirmed (2026-07-05)
+ * that KWin retriggers a full repaint of this output continuously (~4Hz)
+ * even with a completely static screen, and that this continuous CPU work
+ * is the direct, confirmed cause of system-wide audio stuttering (unplugging
+ * the display instantly stops the stutter). Tunable at load time via
+ * `vblank_timer_ms` module parameter so different values can be tried across
+ * reboots without editing source each time. */
+static ushort msdisp_drm_vblank_timer_ms = 20;
+module_param_named(vblank_timer_ms,
+		   msdisp_drm_vblank_timer_ms, ushort, 0644);
+MODULE_PARM_DESC(vblank_timer_ms, "Software vblank/frame-completion timer interval in ms (default: 20)");
 
 static ushort msdisp_drm_initial_pipeline_count = 3;
 module_param_named(initial_pipeline_count,
@@ -176,7 +192,7 @@ static void msidsip_drm_timer_func(struct timer_list* t)
 		msdisp_drm_handle_page_flip(&msdisp->pipeline[i]);
 	}
 
-	mod_timer(&msdisp->vblank_timer, jiffies + msecs_to_jiffies(MSDISP_DRM_VBLANK_TIMER_OUT_MS));
+	mod_timer(&msdisp->vblank_timer, jiffies + msecs_to_jiffies(msdisp_drm_vblank_timer_ms));
 }
 
 static int msdisp_drm_init(struct msdisp_drm_device *msdisp)
@@ -191,7 +207,7 @@ static int msdisp_drm_init(struct msdisp_drm_device *msdisp)
 	}
 
 	timer_setup(&msdisp->vblank_timer, msidsip_drm_timer_func, 0);
-	msdisp->vblank_timer.expires = (jiffies + msecs_to_jiffies(MSDISP_DRM_VBLANK_TIMER_OUT_MS));
+	msdisp->vblank_timer.expires = (jiffies + msecs_to_jiffies(msdisp_drm_vblank_timer_ms));
 	add_timer(&msdisp->vblank_timer);
  
 	ret = msdisp_drm_modeset_init(dev);

@@ -41,6 +41,8 @@
 #include "msdisp_drm_event.h"
 #include "msdisp_common_util.h"
 #include "msdisp_usb_interface.h"
+#include <drm/drm_fourcc.h>
+#include <drm/drm_cache.h>
 
 
 static struct msdisp_drm_pipeline* get_pipeline_by_plane(struct drm_plane* plane)
@@ -82,11 +84,15 @@ void msdisp_crtc_update_event(struct drm_crtc *crtc)
 
 	if (crtc->state->event) {
 		unsigned long flags;
+		struct drm_pending_vblank_event *pending;
 
 		crtc->state->event->pipe = drm_crtc_index(crtc);
 		spin_lock_irqsave(&dev->event_lock, flags);
+		pending = pipeline->event;
 		pipeline->event = crtc->state->event;
 		crtc->state->event = NULL;
+		if (pending)
+			drm_crtc_send_vblank_event(crtc, pending);
 		spin_unlock_irqrestore(&dev->event_lock, flags);
 	}
 }
@@ -106,13 +112,7 @@ void msdisp_drm_crtc_atomic_flush(struct drm_crtc *crtc,
 #endif
 )
 {
-#if KERNEL_VERSION(5, 11, 0) <= LINUX_VERSION_CODE || defined(RPI) || defined(EL8)
-	struct drm_crtc_state *crtc_state = drm_atomic_get_old_crtc_state(state, crtc);
-#else
-	struct drm_crtc_state *crtc_state = old_state;
-#endif
-
-	if (crtc->state->active && crtc_state->active){
+	if (crtc->state->active){
 		msdisp_crtc_update_event(crtc);
 	}
 }
@@ -382,7 +382,7 @@ static void msdisp_drm_plane_atomic_update(struct drm_plane *plane,
 		return;
 	}
 
-	fb = old_state->fb;
+	fb = plane->state->fb;
 	if (!fb) {
 		stat->no_fb++;
 		return;
@@ -414,6 +414,11 @@ static void msdisp_drm_plane_atomic_update(struct drm_plane *plane,
 			stat->cpu_access_fail++;
 			goto err_fb;
 		}
+	}
+
+	if (import_attach && efb->obj->pages) {
+		drm_clflush_pages(efb->obj->pages,
+				  DIV_ROUND_UP(efb->obj->base.size, PAGE_SIZE));
 	}
 
 	if (pipeline->dump_fb_flag) {
@@ -467,6 +472,12 @@ static const struct drm_plane_funcs msdisp_drm_plane_funcs = {
 
 static const uint32_t formats[] = {
 	DRM_FORMAT_XRGB8888,
+	DRM_FORMAT_ARGB8888,
+};
+
+static const uint64_t format_modifiers[] = {
+	DRM_FORMAT_MOD_LINEAR,
+	DRM_FORMAT_MOD_INVALID
 };
 
 static struct drm_plane *msdisp_drm_create_plane(
@@ -491,7 +502,7 @@ static struct drm_plane *msdisp_drm_create_plane(
 				       &msdisp_drm_plane_funcs,
 				       formats,
 				       ARRAY_SIZE(formats),
-				       NULL,
+				       format_modifiers,
 				       type,
 				       plane_type
 				       );

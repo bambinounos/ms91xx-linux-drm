@@ -786,6 +786,15 @@ static void usb_hal_free_buf(struct usb_hal_dev* usb_dev)
 	switch (usb_dev->usb_buf.type) {
 		case USB_HAL_BUF_TYPE_USB:
 			usb_free_coherent(usb_dev->udev, usb_dev->usb_buf.size, usb_dev->usb_buf.buf, usb_dev->usb_buf.dma_addr);
+
+            /* These four are unconditionally vmalloc'd in usb_dev_vmalloc_image()
+             * regardless of which usb_buf.type ends up selected, but only the
+             * VMALLOC case below was freeing them -- this case leaked all four
+             * (~5MB+) on every USB disconnect/reconnect or module reload. */
+            if (usb_dev->cursor_buf.buf)  vfree(usb_dev->cursor_buf.buf);
+            if (usb_dev->old_cursor_buf.buf)  vfree(usb_dev->old_cursor_buf.buf);
+            if (usb_dev->desktop_buf.buf)  vfree(usb_dev->desktop_buf.buf);
+            if (usb_dev->image_buf.buf)  vfree(usb_dev->image_buf.buf);
 			break;
 		case USB_HAL_BUF_TYPE_VMALLOC:
 			sg_free_table(usb_dev->usb_buf.sgt);
@@ -805,6 +814,7 @@ static void usb_hal_free_buf(struct usb_hal_dev* usb_dev)
     usb_dev->desktop_buf.buf = NULL;
    	usb_dev->cursor_buf.buf = NULL;
     usb_dev->old_cursor_buf.buf = NULL;
+    usb_dev->image_buf.buf = NULL;
 }
 
 static int usb_dev_vmalloc_image(struct usb_hal_dev* usb_dev)

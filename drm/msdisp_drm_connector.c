@@ -13,6 +13,7 @@
  */
 
 
+#include <drm/drm_print.h>
 #include <linux/version.h>
 #include <drm/drm_crtc.h>
 #include <drm/drm_edid.h>
