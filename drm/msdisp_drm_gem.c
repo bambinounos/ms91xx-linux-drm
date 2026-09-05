@@ -110,9 +110,12 @@ static bool msdisp_drm_gem_object_use_import_attach(struct drm_gem_object *obj)
 		return false;
 	}
 
-	return true;
-	//return obj->import_attach && 
-	//       strcmp(obj->import_attach->dmabuf->owner->name, "amdgpu") != 0;
+	/* amdgpu does not implement the optional .vmap dma-buf op, so
+	 * dma_buf_vmap() below returns -EINVAL for its buffers. Fall back to the
+	 * page/sg_table path for that exporter, where the buffer is vmap'd from
+	 * its page array instead. */
+	return obj->import_attach->dmabuf->owner &&
+	       strcmp(obj->import_attach->dmabuf->owner->name, "amdgpu") != 0;
 }
 
 uint32_t msdisp_drm_gem_object_handle_lookup(struct drm_file *filp,
@@ -348,7 +351,7 @@ int msdisp_drm_gem_vmap(struct msdisp_drm_gem_object *obj)
 #endif
 
 #if KERNEL_VERSION(5, 11, 0) <= LINUX_VERSION_CODE || defined(EL8)
-		ret = dma_buf_vmap(obj->base.import_attach->dmabuf, &map);
+		ret = dma_buf_vmap_unlocked(obj->base.import_attach->dmabuf, &map);
 		if (ret)
 			return -ENOMEM;
 		obj->vmapping = map.vaddr;
@@ -382,7 +385,7 @@ void msdisp_drm_gem_vunmap(struct msdisp_drm_gem_object *obj)
 		else
 			iosys_map_set_vaddr(&map, obj->vmapping);
 
-		dma_buf_vunmap(obj->base.import_attach->dmabuf, &map);
+		dma_buf_vunmap_unlocked(obj->base.import_attach->dmabuf, &map);
 
 #elif KERNEL_VERSION(5, 11, 0) <= LINUX_VERSION_CODE || defined(EL8)
 		struct dma_buf_map map;
@@ -392,7 +395,7 @@ void msdisp_drm_gem_vunmap(struct msdisp_drm_gem_object *obj)
 		else
 			dma_buf_map_set_vaddr(&map, obj->vmapping);
 
-		dma_buf_vunmap(obj->base.import_attach->dmabuf, &map);
+		dma_buf_vunmap_unlocked(obj->base.import_attach->dmabuf, &map);
 #else
 		dma_buf_vunmap(obj->base.import_attach->dmabuf, obj->vmapping);
 #endif

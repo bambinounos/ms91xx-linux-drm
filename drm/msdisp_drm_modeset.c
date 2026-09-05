@@ -41,6 +41,8 @@
 #include "msdisp_drm_event.h"
 #include "msdisp_common_util.h"
 #include "msdisp_usb_interface.h"
+#include <drm/drm_fourcc.h>
+#include <drm/drm_cache.h>
 
 
 static struct msdisp_drm_pipeline* get_pipeline_by_plane(struct drm_plane* plane)
@@ -444,6 +446,16 @@ static void msdisp_drm_plane_atomic_update(struct drm_plane *plane,
 		}
 	}
 
+	/* When the buffer is mapped through our own page array rather than the
+	 * exporter's .vmap, the exporter's begin_cpu_access() cannot invalidate a
+	 * mapping it does not know about, so nothing invalidates our cache lines
+	 * before we read the GPU's writes. Without this the image is stale but
+	 * self-consistent: correct while static, torn during motion. */
+	if (import_attach && efb->obj->pages) {
+		drm_clflush_pages(efb->obj->pages,
+				  DIV_ROUND_UP(efb->obj->base.size, PAGE_SIZE));
+	}
+
 	if (pipeline->dump_fb_flag) {
         msdisp_common_save_buf_to_bmp(efb->obj->vmapping, fb->width, fb->height, fb->format->cpp[0], NULL, pipeline->dump_fb_filename);
         pipeline->dump_fb_flag = 0;
@@ -495,6 +507,12 @@ static const struct drm_plane_funcs msdisp_drm_plane_funcs = {
 
 static const uint32_t formats[] = {
 	DRM_FORMAT_XRGB8888,
+	DRM_FORMAT_ARGB8888,
+};
+
+static const uint64_t format_modifiers[] = {
+	DRM_FORMAT_MOD_LINEAR,
+	DRM_FORMAT_MOD_INVALID
 };
 
 static struct drm_plane *msdisp_drm_create_plane(
@@ -519,7 +537,7 @@ static struct drm_plane *msdisp_drm_create_plane(
 				       &msdisp_drm_plane_funcs,
 				       formats,
 				       ARRAY_SIZE(formats),
-				       NULL,
+				       format_modifiers,
 				       type,
 				       plane_type
 				       );
