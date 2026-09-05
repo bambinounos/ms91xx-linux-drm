@@ -382,7 +382,6 @@ static void msdisp_drm_plane_atomic_update(struct drm_plane *plane,
 #else
 #endif
 	struct drm_device* dev;
-	struct msdisp_drm_device *msdisp_drm;
 	struct msdisp_usb_hal* usb_hal;
 	struct drm_framebuffer *fb;
 	struct msdisp_drm_framebuffer *efb;
@@ -447,7 +446,7 @@ static void msdisp_drm_plane_atomic_update(struct drm_plane *plane,
 	if (pipeline->dump_fb_flag) {
         msdisp_common_save_buf_to_bmp(efb->obj->vmapping, fb->width, fb->height, fb->format->cpp[0], NULL, pipeline->dump_fb_filename);
         pipeline->dump_fb_flag = 0;
-        dev_info(msdisp_drm->drm.dev, "msdisp finished save raw fb data to file:%s\n", pipeline->dump_fb_filename);
+        dev_info(dev->dev, "msdisp finished save raw fb data to file:%s\n", pipeline->dump_fb_filename);
     }
 
 	mutex_lock(&pipeline->hal_lock);

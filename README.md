@@ -63,6 +63,16 @@ sudo insmod drm/usbdisp_drm.ko
 sudo insmod drm/usbdisp_usb.ko
 ```
 
+> ⚠️ The tree must live in a **path without spaces**. kbuild copies `M=` into
+> `KBUILD_EXTMOD` and rejects it with `$(if $(word 2,$(KBUILD_EXTMOD)),...)`,
+> which splits the path on whitespace *inside make* — after the shell already
+> passed it as a single argument — and aborts with the misleading
+> `building multiple external modules is not supported`. No amount of quoting in
+> the recipe avoids it, and a space-free symlink does not help either: make
+> resolves `CURDIR` to the physical path. `drm/Makefile` now fails early with a
+> message that names the real cause. **DKMS is unaffected** — it builds in
+> `/usr/src/msdisp-3.0.3.13`.
+
 ## What this fork fixes (vs. official V3.0.3.13)
 
 MacroSilicon's last public release targets kernels up to ~6.6. On newer kernels it
