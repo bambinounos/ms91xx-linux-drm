@@ -301,6 +301,21 @@ static const struct usb_device_id id_table[] = {
 			USB_DEVICE_ID_MATCH_INT_CLASS |
 			USB_DEVICE_ID_MATCH_INT_SUBCLASS |
 			USB_DEVICE_ID_MATCH_INT_PROTOCOL,},
+
+	/* Post-modeswitch functional ID: this dongle enumerates as 345f:9132
+	 * (fake driver-CD mode) only until something claims it, then it
+	 * re-enumerates as 534d:6021 "MacroSilicon VGA Display Adapter" for
+	 * its actual HID+Audio+vendor-display composite function. Interface
+	 * 3 (bInterfaceClass 0xff/0x00/0x00, iInterface "msusb video") is the
+	 * display control interface, same shape as the 345f entries above. */
+	{.idVendor = 0x534d, .idProduct = 0x6021, .bInterfaceClass = 0xff,
+	 .bInterfaceSubClass = 0x00,
+	 .bInterfaceProtocol = 0x00,
+	 .match_flags = USB_DEVICE_ID_MATCH_VENDOR |
+            USB_DEVICE_ID_MATCH_PRODUCT |
+			USB_DEVICE_ID_MATCH_INT_CLASS |
+			USB_DEVICE_ID_MATCH_INT_SUBCLASS |
+			USB_DEVICE_ID_MATCH_INT_PROTOCOL,},
 	{},
 };
 MODULE_DEVICE_TABLE(usb, id_table);

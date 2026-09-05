@@ -27,6 +27,7 @@
 #include "msdisp_usb_interface.h"
 #include "msdisp_usb_drv.h"
 #include "usb_hal_interface.h"
+#include "usb_hal_dev.h"
 
 int ms9132_hal_get_hpd_status(struct msdisp_usb_hal* usb_hal, unsigned int* status)
 {
@@ -112,18 +113,34 @@ int ms9132_hal_get_custom_cea_vic(struct msdisp_usb_hal* usb_hal, u8* buf, int s
 {
     struct msdisp_usb_device* msdisp_usb = (struct msdisp_usb_device *)usb_hal->private;
     struct usb_hal* hal = msdisp_usb->hal;
+    /* usb_hal_dev is where usb_hal_add_custom_mode() (called from
+     * msdisp_usb_add_custom_mode() at probe, parsing the custom_mode=
+     * module param) actually stores the parsed modes -- the fixed
+     * VIDEO_PORT_CVBS_SVIDEO-only fallback below never consulted them. */
+    struct usb_hal_dev* usb_dev = (struct usb_hal_dev*)hal->private;
+    int i;
 
     *cnt = 0;
+
+    for (i = 0; i < usb_dev->custom_mode_cnt && *cnt < size; i++) {
+        buf[*cnt] = usb_dev->custom_mode[i].vic;
+        (*cnt)++;
+    }
+
+    if (*cnt > 0) {
+        return 0;
+    }
+
     if (VIDEO_PORT_CVBS_SVIDEO == hal->port_type) {
         if (size < 1) {
             return -ERANGE;
         }
 
         buf[0] = _VFMT_CEA_02_720x480P_60HZ;
-        *cnt = 1;        
+        *cnt = 1;
 
         buf[1] = _VFMT_CEA_17_720x576P_50HZ;
-        *cnt = 2; 
+        *cnt = 2;
     }
 
     return 0;
@@ -159,9 +176,10 @@ struct msdisp_usb_hal_funcs ms9132_hal_funcs = {
 
 struct msdisp_usb_hal_funcs* msdisp_usb_find_usb_hal(const struct usb_device_id *id)
 {
-    if (((id->idVendor == ms9132_id.idVendor) && (id->idProduct == ms9132_id.idProduct)) 
+    if (((id->idVendor == ms9132_id.idVendor) && (id->idProduct == ms9132_id.idProduct))
             || ((id->idVendor == ms9133_id.idVendor) && (id->idProduct == ms9133_id.idProduct))
-            || ((id->idVendor == ms9135_id.idVendor) && (id->idProduct == ms9135_id.idProduct))) {
+            || ((id->idVendor == ms9135_id.idVendor) && (id->idProduct == ms9135_id.idProduct))
+            || ((id->idVendor == ms6021_id.idVendor) && (id->idProduct == ms6021_id.idProduct))) {
 
         return &ms9132_hal_funcs;
     }

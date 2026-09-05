@@ -43,6 +43,13 @@
 void usb_hal_sysfs_init(struct usb_interface *interface);
 void usb_hal_sysfs_exit(struct usb_interface *interface);
 
+static int port_type_override = -1;
+module_param_named(port_type, port_type_override, int, S_IRUGO);
+MODULE_PARM_DESC(port_type,
+	"Override the detected video output port type (see VIDEO_PORT_* in "
+	"usb_hal_chip.h): 0=CVBS 1=SVIDEO 2=VGA 3=YPBPR 4=CVBS_SVIDEO 5=HDMI "
+	"6=DIGITAL. -1 (default) = trust the chip's port register.");
+
 #define USB_HAL_COLOR_FORMAT_RGB                0
 #define USB_HAL_COLOR_FORMAT_YUV                1
 
@@ -1014,6 +1021,44 @@ static int usb_dev_hal_init(struct usb_hal* usb_hal)
 	if (ret) {
 		dev_err(&udev->dev, "get video port type failed! ret=%d\n", ret);
 		return -ENOENT;
+	}
+
+	/* Some dongles report a bogus VIDEO_PORT_* in the chip's port register.
+	 * Observed on this 534d:6021 / MS912C adapter: the register reads 1
+	 * (VIDEO_PORT_SVIDEO) even though the physical connector is VGA. That
+	 * matters because ms9132_set_screen_enable()'s non-9132 switch has no
+	 * case for VIDEO_PORT_SVIDEO, so it falls to default (xdata 0xf004 bit
+	 * 0x2 -- the CVBS/S-Video output enable) instead of the VIDEO_PORT_VGA
+	 * case (xdata 0xf004 bit 0x80 -- the VGA DAC enable). Everything else
+	 * works (frames stream over USB, chip ACKs them) but the VGA DAC is
+	 * never powered on, so the monitor sees no signal at all.
+	 * port_type=<n> overrides the detected value; -1 keeps autodetection. */
+	if (port_type_override >= 0) {
+		if (port_type_override >= VIDEO_PORT_MAX) {
+			dev_err(&udev->dev, "port_type override %d out of range (0-%d)\n",
+				port_type_override, VIDEO_PORT_MAX - 1);
+			return -EINVAL;
+		}
+		dev_info(&udev->dev, "video port type overridden: %d -> %d\n",
+			 usb_hal->port_type, port_type_override);
+		usb_hal->port_type = (u8)port_type_override;
+
+		/* Overriding our own copy is not enough: the chip's firmware
+		 * reads the very same port register (MS9132_XDATA_REG_VIDEO_PORT,
+		 * xdata 0x31) when it programs its video timing generator during
+		 * the enable sequence. Left at 1 (S-Video) it emits S-Video-style
+		 * timing that a VGA monitor cannot lock onto -- the DAC is on
+		 * (see above) but the monitor still reports "no signal" and
+		 * sleeps. The register is plain writable xdata, so push the
+		 * override into the chip too. It lives in volatile RAM and resets
+		 * with the dongle's power, hence re-applying it on every init.
+		 * Verified on this MS912C: with 0x31 = 2 the console shows up. */
+		ret = usb_dev->hal_dev->funcs->xdata_write_byte(udev,
+				MS9132_XDATA_REG_VIDEO_PORT, (u8)port_type_override);
+		if (ret) {
+			dev_err(&udev->dev, "write video port register failed! ret=%d\n", ret);
+			return -ENOENT;
+		}
 	}
 
 	ret = usb_dev->hal_dev->funcs->get_sdram_type(udev, &usb_hal->sdram_type);

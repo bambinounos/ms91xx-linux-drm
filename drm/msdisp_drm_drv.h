@@ -175,6 +175,13 @@ int msdisp_drm_gem_fault(struct vm_fault *vmf);
 #endif
 
 
+#if KERNEL_VERSION(6, 10, 0) <= LINUX_VERSION_CODE
+struct drm_fb_helper;
+struct drm_fb_helper_surface_size;
+int msdisp_drm_fbdev_probe(struct drm_fb_helper *fb_helper,
+			   struct drm_fb_helper_surface_size *sizes);
+#endif
+
 int msdisp_drm_modeset_init(struct drm_device *dev);
 struct drm_encoder *msdisp_drm_encoder_init(struct drm_device *dev);
 struct msdisp_drm_connector *msdisp_drm_connector_init(struct drm_device *dev, struct drm_encoder *encoder, int index);

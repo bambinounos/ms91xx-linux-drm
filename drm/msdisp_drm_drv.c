@@ -31,6 +31,11 @@
 #include <drm/drm_managed.h>
 #endif
 #include <drm/drm_atomic_helper.h>
+#if KERNEL_VERSION(6, 10, 0) <= LINUX_VERSION_CODE
+#include <drm/drm_client_setup.h>
+#else
+#include <drm/drm_fbdev_generic.h>
+#endif
 
 
 #include "msdisp_drm_drv.h"
@@ -135,6 +140,10 @@ static struct drm_driver driver = {
 	.disable_vblank = msdisp_drm_disable_vblank,
 #endif
 	.gem_prime_import_sg_table = msdisp_drm_prime_import_sg_table,
+
+#if KERNEL_VERSION(6, 10, 0) <= LINUX_VERSION_CODE
+	.fbdev_probe = msdisp_drm_fbdev_probe,
+#endif
 
 	.name = DRIVER_NAME,
 	.desc = DRIVER_DESC,
@@ -311,6 +320,19 @@ struct drm_device *msdisp_drm_device_create(struct device *parent)
 	ret = drm_dev_register(drm, 0);
 	if (ret)
 		goto err_free;
+
+	/* Vendor driver never registered a generic fbdev/fbcon client, so
+	 * nothing ever created /dev/fb0 or bound the text console to this
+	 * device -- connector correctly reported "connected" but no video
+	 * signal was ever actually output. drm_client_setup() (6.10+) /
+	 * drm_fbdev_generic_setup() (older) is the standard call other
+	 * simple KMS drivers make here; NULL/32 lets it pick a format
+	 * automatically. */
+#if KERNEL_VERSION(6, 10, 0) <= LINUX_VERSION_CODE
+	drm_client_setup(drm, NULL);
+#else
+	drm_fbdev_generic_setup(drm, 32);
+#endif
 
 	msdisp_drm_sysfs_init(msdisp_drm);
 	return drm;

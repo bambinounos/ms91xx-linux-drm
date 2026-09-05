@@ -20,8 +20,16 @@ $ lsusb | grep 345f
 Bus 004 Device 003: ID 345f:9132 MS           USB Video
 ```
 
-If you see `345f:9132`, `345f:9133` or `345f:9135`, yes. Typical symptoms before
-installing this driver:
+If you see `345f:9132`, `345f:9133` or `345f:9135`, yes.
+
+If you see **`534d:6021`** ("MacroSilicon USB Video" / "VGA Display Adapter"),
+also yes — that is the functional identity these dongles mode-switch to on their
+own after enumerating as `345f:9132`. USB→**VGA** adapters in that family are
+usually **MS912C** chips (`dmesg` reports `chip id:0x3`) and need two extra
+module options to produce any picture at all; see
+**[docs/MS912C-VGA.md](docs/MS912C-VGA.md)**.
+
+Typical symptoms before installing this driver:
 
 - The monitor only shows a **red/standby LED** on Linux (works fine on Windows).
 - The device **re-enumerates every ~10 seconds** (`dmesg` shows connect/disconnect
@@ -76,6 +84,9 @@ compositors silently ignore the device. All fixes are guarded with
 | `drm_legacy.h` deleted; missing `vmalloc.h` / `scatterlist.h` includes | ≥ 6.8 |
 | `struct_mutex` removed from `drm_device` (GEM locking is internal); explicit `drm_print.h` includes; `DRM_DEBUG_PRIME` → `drm_dbg_prime()` | ≥ 7.0 |
 | Makefiles: removed vestigial `KERNELRELEASE`/`include Kbuild` branch that **broke DKMS builds**; `$(PWD)` → `$(CURDIR)`; added `dkms.conf` | all |
+| `drm_do_get_edid()` guard lowered to ≥ 6.12 — Debian's `6.12.101+deb13` backports the 6.13 EDID API while still reporting 6.12, so the build failed | ≥ 6.12 (Debian) |
+| `.fbdev_probe` implemented + GEM `.vmap`/`.vunmap` + `drm_client_setup()` — no fbdev client was ever registered, so `/dev/fb0` and the text console never existed | ≥ 6.10 |
+| `534d:6021` added to all three ID lookup tables; `port_type=` override; `custom_mode=` modes actually honoured; EDID no longer required for a DDC-less display — see [docs/MS912C-VGA.md](docs/MS912C-VGA.md) | all |
 
 The protocol/init logic is **untouched** — it is exactly the manufacturer's code.
 

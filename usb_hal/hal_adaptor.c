@@ -22,7 +22,8 @@ const struct msdisp_hal_dev* hal_dev[] =
 {
     &ms9132_dev,
     &ms9133_dev,
-    &ms9135_dev
+    &ms9135_dev,
+    &ms6021_dev
 };
 
 const struct msdisp_hal_dev* msdisp_hal_find_dev(const struct usb_device_id *id, struct usb_device* udev)

@@ -1059,10 +1059,16 @@ const struct msdisp_hal_id ms9133_id =
     .idProduct = MSDISP_9133_PRODUCT
 };
 
-const struct msdisp_hal_id ms9135_id = 
+const struct msdisp_hal_id ms9135_id =
 {
     .idVendor = MSDISP_913X_VENDOR,
     .idProduct = MSDISP_9135_PRODUCT
+};
+
+const struct msdisp_hal_id ms6021_id =
+{
+    .idVendor = MSDISP_6021_VENDOR,
+    .idProduct = MSDISP_6021_PRODUCT
 };
 
 const struct msdisp_hal_funcs ms91xx_funcs = {
@@ -1103,5 +1109,10 @@ struct msdisp_hal_dev ms9133_dev = {
 
 struct msdisp_hal_dev ms9135_dev = {
     .id = &ms9135_id,
+    .funcs = &ms91xx_funcs
+};
+
+struct msdisp_hal_dev ms6021_dev = {
+    .id = &ms6021_id,
     .funcs = &ms91xx_funcs
 };
