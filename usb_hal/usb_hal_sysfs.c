@@ -63,6 +63,10 @@ static ssize_t usb_hal_frame_show(struct device* dev, struct device_attribute* a
 	strcat(buf, tmp);
 	sprintf(tmp, "try lock fail:%lld\n", stat->try_lock_fail);
 	strcat(buf, tmp);
+	sprintf(tmp, "empty rect skip:%lld\n", stat->empty_rect_skip);
+	strcat(buf, tmp);
+	sprintf(tmp, "short send:%lld\n", stat->short_send);
+	strcat(buf, tmp);
 	
 	return strlen(buf);
 }
