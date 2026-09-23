@@ -45,7 +45,9 @@
 #include "msdisp_drm_drv.h"
 #include "msdisp_plat_drv.h"
 
-#define	MSDISP_DRM_VBLANK_TIMER_OUT_MS				20
+static ushort msdisp_drm_vblank_timer_ms = 20;
+module_param_named(vblank_timer_ms, msdisp_drm_vblank_timer_ms, ushort, 0644);
+MODULE_PARM_DESC(vblank_timer_ms, "Software vblank/frame-completion timer interval in ms (default: 20)");
 
 static ushort msdisp_drm_initial_pipeline_count = 3;
 module_param_named(initial_pipeline_count,
@@ -189,7 +191,7 @@ static void msidsip_drm_timer_func(struct timer_list* t)
 		msdisp_drm_handle_page_flip(&msdisp->pipeline[i]);
 	}
 
-	mod_timer(&msdisp->vblank_timer, jiffies + msecs_to_jiffies(MSDISP_DRM_VBLANK_TIMER_OUT_MS));
+	mod_timer(&msdisp->vblank_timer, jiffies + msecs_to_jiffies(msdisp_drm_vblank_timer_ms));
 }
 
 static int msdisp_drm_init(struct msdisp_drm_device *msdisp)
@@ -204,7 +206,7 @@ static int msdisp_drm_init(struct msdisp_drm_device *msdisp)
 	}
 
 	timer_setup(&msdisp->vblank_timer, msidsip_drm_timer_func, 0);
-	msdisp->vblank_timer.expires = (jiffies + msecs_to_jiffies(MSDISP_DRM_VBLANK_TIMER_OUT_MS));
+	msdisp->vblank_timer.expires = (jiffies + msecs_to_jiffies(msdisp_drm_vblank_timer_ms));
 	add_timer(&msdisp->vblank_timer);
  
 	ret = msdisp_drm_modeset_init(dev);

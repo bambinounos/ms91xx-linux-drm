@@ -82,11 +82,15 @@ void msdisp_crtc_update_event(struct drm_crtc *crtc)
 
 	if (crtc->state->event) {
 		unsigned long flags;
+		struct drm_pending_vblank_event *pending;
 
 		crtc->state->event->pipe = drm_crtc_index(crtc);
 		spin_lock_irqsave(&dev->event_lock, flags);
+		pending = pipeline->event;
 		pipeline->event = crtc->state->event;
 		crtc->state->event = NULL;
+		if (pending)
+			drm_crtc_send_vblank_event(crtc, pending);
 		spin_unlock_irqrestore(&dev->event_lock, flags);
 	}
 }
@@ -106,13 +110,7 @@ void msdisp_drm_crtc_atomic_flush(struct drm_crtc *crtc,
 #endif
 )
 {
-#if KERNEL_VERSION(5, 11, 0) <= LINUX_VERSION_CODE || defined(RPI) || defined(EL8)
-	struct drm_crtc_state *crtc_state = drm_atomic_get_old_crtc_state(state, crtc);
-#else
-	struct drm_crtc_state *crtc_state = old_state;
-#endif
-
-	if (crtc->state->active && crtc_state->active){
+	if (crtc->state->active){
 		msdisp_crtc_update_event(crtc);
 	}
 }

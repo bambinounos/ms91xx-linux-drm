@@ -89,6 +89,8 @@ struct usb_hal_dev_frame_stat {
     u64 period_send;
     u64 state_error;
     u64 try_lock_fail;
+    u64 empty_rect_skip;
+    u64 short_send;
 };
  
 struct usb_hal_change_rect {
