@@ -100,6 +100,11 @@ compositors silently ignore the device. All fixes are guarded with
 | Plane atomic update fix: uses `plane->state->fb` instead of `old_state->fb` — resolves 1-frame delayed screen updates (input lag when typing) and black screen on resume | all |
 | Wayland mouse cursor fix: supports cursor sizes ≤ 64×64 (24×24, 32×32, 48×48) with transparent padding and fixes GEM refcount leak — cursor now visible in GNOME Wayland | all |
 | Hotplug uevents: `drm_kms_helper_hotplug_event()` triggered on probe, disconnect, and reset-resume so compositors immediately detect and repaint the display | all |
+| Vblank completion events: delivers pending vblank events on CRTC enable and drains queued events under `event_lock` — fixes dropped frame completions and drops idle compositor CPU from 100% to ~2% | all |
+| Frame transfer reliability: splits bulk frame transfers into 64KB chunks to avoid `-110`/`ETIMEDOUT` stalls on large frames; double-buffer index only advances on successful send to prevent ping-pong desync | all |
+| Teardown memory leak: frees `cursor_buf`, `old_cursor_buf`, `desktop_buf`, and `image_buf` in `USB_HAL_BUF_TYPE_USB` path — saves ~5MB leaked on every disconnect/reload | all |
+| AMD GPU (`amdgpu`) host support: page-array import fallback for dmabuf exporters lacking `.vmap`, CPU cache invalidation via `drm_clflush_pages()`, `dma_buf_vmap_unlocked` on ≥ 6.2, `ARGB8888` and `DRM_FORMAT_MOD_LINEAR` modifier advertisement | all / ≥ 6.2 |
+| Panel mode 1024×600@60 (VIC 150) added to supported modes table | all |
 
 The protocol/init logic is **untouched** — it is exactly the manufacturer's code.
 

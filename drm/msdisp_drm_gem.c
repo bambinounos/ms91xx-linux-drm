@@ -350,8 +350,14 @@ int msdisp_drm_gem_vmap(struct msdisp_drm_gem_object *obj)
 		struct dma_buf_map map = DMA_BUF_MAP_INIT_VADDR(NULL);
 #endif
 
-#if KERNEL_VERSION(5, 11, 0) <= LINUX_VERSION_CODE || defined(EL8)
+#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
 		ret = dma_buf_vmap_unlocked(obj->base.import_attach->dmabuf, &map);
+		if (ret)
+			return -ENOMEM;
+		obj->vmapping = map.vaddr;
+		obj->vmap_is_iomem = map.is_iomem;
+#elif KERNEL_VERSION(5, 11, 0) <= LINUX_VERSION_CODE || defined(EL8)
+		ret = dma_buf_vmap(obj->base.import_attach->dmabuf, &map);
 		if (ret)
 			return -ENOMEM;
 		obj->vmapping = map.vaddr;
@@ -385,7 +391,11 @@ void msdisp_drm_gem_vunmap(struct msdisp_drm_gem_object *obj)
 		else
 			iosys_map_set_vaddr(&map, obj->vmapping);
 
+#if KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE
 		dma_buf_vunmap_unlocked(obj->base.import_attach->dmabuf, &map);
+#else
+		dma_buf_vunmap(obj->base.import_attach->dmabuf, &map);
+#endif
 
 #elif KERNEL_VERSION(5, 11, 0) <= LINUX_VERSION_CODE || defined(EL8)
 		struct dma_buf_map map;
@@ -395,7 +405,7 @@ void msdisp_drm_gem_vunmap(struct msdisp_drm_gem_object *obj)
 		else
 			dma_buf_map_set_vaddr(&map, obj->vmapping);
 
-		dma_buf_vunmap_unlocked(obj->base.import_attach->dmabuf, &map);
+		dma_buf_vunmap(obj->base.import_attach->dmabuf, &map);
 #else
 		dma_buf_vunmap(obj->base.import_attach->dmabuf, obj->vmapping);
 #endif
