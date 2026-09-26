@@ -105,6 +105,7 @@ compositors silently ignore the device. All fixes are guarded with
 | Teardown memory leak: frees `cursor_buf`, `old_cursor_buf`, `desktop_buf`, and `image_buf` in `USB_HAL_BUF_TYPE_USB` path — saves ~5MB leaked on every disconnect/reload | all |
 | AMD GPU (`amdgpu`) host support: page-array import fallback for dmabuf exporters lacking `.vmap`, CPU cache invalidation via `drm_clflush_pages()`, `dma_buf_vmap_unlocked` on ≥ 6.2, `ARGB8888` and `DRM_FORMAT_MOD_LINEAR` modifier advertisement | all / ≥ 6.2 |
 | Panel mode 1024×600@60 (VIC 150) added to supported modes table | all |
+| Frame copy bounds check: `usb_hal_update_frame()` drops frames whose framebuffer is smaller than the active mode instead of copying past its end — fixes a kernel oops (page fault in `memcpy`) that took down the compositor on every resolution change | all |
 
 The protocol/init logic is **untouched** — it is exactly the manufacturer's code.
 

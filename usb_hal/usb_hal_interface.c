@@ -587,8 +587,28 @@ int usb_hal_update_frame(struct usb_hal* hal, u8* buf, int pitch, u32 len, u32 f
     }
     
     if (USB_HAL_COLOR_FORMAT_RGB == desc->color_fmt) {
+        u64 row_bytes = (u64)usb_dev->mode.width * 4;
+        u64 need = row_bytes * usb_dev->mode.height;
+
+        /*
+         * The framebuffer can momentarily be a different size than the mode
+         * the device is running (e.g. while the compositor switches
+         * resolution). Copying with the stale mode size reads past the end of
+         * the smaller framebuffer and oopses, so drop such frames.
+         */
+        if (!usb_dev->mode.width || !usb_dev->mode.height ||
+            pitch <= 0 || (u64)pitch < row_bytes ||
+            (u64)len < (u64)pitch * (usb_dev->mode.height - 1) + row_bytes ||
+            need > USB_HAL_BUF_SIZE) {
+            usb_dev->stat.state_error++;
+            mutex_unlock(&usb_buf->mutex);
+            dev_warn_ratelimited(&udev->dev, "drop frame: pitch:%d len:%u mode:%dx%d\n",
+                                 pitch, len, usb_dev->mode.width, usb_dev->mode.height);
+            return -EINVAL;
+        }
+
         if (pitch == usb_dev->mode.width * 4) {
-            memcpy(usb_dev->desktop_buf.buf, buf, len);
+            memcpy(usb_dev->desktop_buf.buf, buf, need);
         } else {
             p_dst = usb_dev->desktop_buf.buf;
             for (row = 0; row < usb_dev->mode.height; row++) {
