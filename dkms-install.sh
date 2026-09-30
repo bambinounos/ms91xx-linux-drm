@@ -37,7 +37,25 @@ dkms install msdisp/$VERSION -k "$KVER"
 
 # Reload kernel modules if device is attached
 echo "Reloading kernel modules..."
-modprobe -r usbdisp_usb usbdisp_drm 2>/dev/null || true
+# Unbind platform devices first so DRM device is unplugged and userspace releases it
+for dev in /sys/bus/platform/drivers/msdisp_plat/msdisp_plat.*; do
+    if [ -e "$dev" ]; then
+        dev_name=$(basename "$dev")
+        echo "Unbinding $dev_name..."
+        echo "$dev_name" > /sys/bus/platform/drivers/msdisp_plat/unbind 2>/dev/null || true
+    fi
+done
+sleep 1
+
+modprobe -r usbdisp_usb 2>/dev/null || true
+modprobe -r usbdisp_drm 2>/dev/null || true
+modprobe usbdisp_drm 2>/dev/null || true
 modprobe usbdisp_usb 2>/dev/null || true
 
-echo "=== msdisp $VERSION successfully installed for $KVER! ==="
+LOADED_VER=$(cat /sys/module/usbdisp_drm/version 2>/dev/null || echo "not loaded")
+if [ "$LOADED_VER" = "$VERSION" ]; then
+    echo "=== msdisp $VERSION successfully loaded into running kernel! ==="
+else
+    echo "=== AVISO: El módulo usbdisp_drm sigue en uso por la sesión gráfica actual (versión cargada: $LOADED_VER). ==="
+    echo "=== Para que tome efecto el soporte de cursor (v$VERSION), es necesario CERRAR SESIÓN y volver a entrar (o REINICIAR el equipo). ==="
+fi
