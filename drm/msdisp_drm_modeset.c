@@ -52,7 +52,10 @@ static struct msdisp_drm_pipeline* get_pipeline_by_plane(struct drm_plane* plane
 	int i;
 
 	for (i = 0; i < msdisp_drm->pipeline_cnt; i++) {
-		if (msdisp_drm->pipeline[i].crtc->primary == plane) {
+		if (!msdisp_drm->pipeline[i].crtc)
+			continue;
+		if (msdisp_drm->pipeline[i].crtc->primary == plane ||
+		    msdisp_drm->pipeline[i].crtc->cursor == plane) {
 			pipeline = &msdisp_drm->pipeline[i];
 			break;
 		}
@@ -323,6 +326,14 @@ out_put:
 }
 
 static int
+msdisp_crtc_cursor_set2(struct drm_crtc *crtc, struct drm_file *file_priv,
+		      uint32_t buffer_handle, uint32_t width, uint32_t height,
+		      int32_t hot_x, int32_t hot_y)
+{
+	return msdisp_crtc_cursor_set(crtc, file_priv, buffer_handle, width, height);
+}
+
+static int
 msdisp_crtc_cursor_move(struct drm_crtc *crtc, int x, int y)
 {
 	struct msdisp_drm_pipeline* pipeline = get_pipeline_by_crtc(crtc);
@@ -349,6 +360,7 @@ static const struct drm_crtc_funcs msdisp_drm_crtc_funcs = {
 	.atomic_duplicate_state = drm_atomic_helper_crtc_duplicate_state,
 	.atomic_destroy_state   = drm_atomic_helper_crtc_destroy_state,
 	.cursor_set             = msdisp_crtc_cursor_set,
+	.cursor_set2            = msdisp_crtc_cursor_set2,
 	.cursor_move            = msdisp_crtc_cursor_move,
 #if KERNEL_VERSION(5, 11, 0) <= LINUX_VERSION_CODE || defined(RPI) || defined(EL8)
 	.enable_vblank          = msdisp_drm_enable_vblank,
@@ -493,6 +505,173 @@ static const struct drm_plane_helper_funcs msdisp_drm_plane_helper_funcs = {
 #endif
 };
 
+static int msdisp_drm_cursor_plane_atomic_check(struct drm_plane *plane,
+#if KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
+						struct drm_atomic_state *state
+#else
+						struct drm_plane_state *new_plane_state
+#endif
+)
+{
+#if KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
+	struct drm_plane_state *new_plane_state = drm_atomic_get_new_plane_state(state, plane);
+#else
+	struct drm_atomic_state *state = new_plane_state->state;
+#endif
+	struct drm_crtc_state *crtc_state;
+
+	if (!new_plane_state->fb)
+		return 0;
+
+	if (!new_plane_state->crtc)
+		return 0;
+
+	if (new_plane_state->fb->width > 64 || new_plane_state->fb->height > 64)
+		return -EINVAL;
+
+	crtc_state = drm_atomic_get_crtc_state(state, new_plane_state->crtc);
+	if (IS_ERR(crtc_state))
+		return PTR_ERR(crtc_state);
+
+	return drm_atomic_helper_check_plane_state(new_plane_state, crtc_state,
+						   DRM_PLANE_NO_SCALING,
+						   DRM_PLANE_NO_SCALING,
+						   true, true);
+}
+
+static void msdisp_drm_cursor_plane_atomic_update(struct drm_plane *plane,
+#if KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
+				     struct drm_atomic_state *state
+#else
+				     struct drm_plane_state *old_state
+#endif
+)
+{
+#if KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
+	struct drm_plane_state *old_state = drm_atomic_get_old_plane_state(state, plane);
+#endif
+	struct drm_plane_state *new_state = plane->state;
+	struct msdisp_drm_pipeline *pipeline;
+	struct msdisp_usb_hal *usb_hal;
+	struct drm_framebuffer *fb;
+	struct msdisp_drm_framebuffer *efb;
+	struct dma_buf_attachment *import_attach;
+	void *vmapping;
+	u8 *cursor_buf = NULL;
+	int y, width, height;
+	bool fb_changed;
+
+	if (!plane || !new_state)
+		return;
+
+	pipeline = get_pipeline_by_plane(plane);
+	if (!pipeline)
+		return;
+
+	usb_hal = pipeline->usb_hal;
+	if (!usb_hal)
+		return;
+
+	fb = new_state->fb;
+	if (!fb || !new_state->visible) {
+		usb_hal->funcs->cursor_set(usb_hal, NULL);
+		return;
+	}
+
+	fb_changed = !old_state || (old_state->fb != fb) || !old_state->visible;
+
+	if (fb_changed) {
+		efb = to_msdisp_drm_fb(fb);
+		if (!efb || !efb->obj)
+			return;
+
+		drm_framebuffer_get(&efb->base);
+
+		if (!efb->obj->vmapping) {
+			if (msdisp_drm_gem_vmap(efb->obj)) {
+				drm_framebuffer_put(&efb->base);
+				return;
+			}
+		}
+
+		vmapping = efb->obj->vmapping;
+		if (!vmapping) {
+			drm_framebuffer_put(&efb->base);
+			return;
+		}
+
+		import_attach = efb->obj->base.import_attach;
+		if (import_attach)
+			dma_buf_begin_cpu_access(import_attach->dmabuf, DMA_FROM_DEVICE);
+
+		if (import_attach && efb->obj->pages)
+			drm_clflush_pages(efb->obj->pages, DIV_ROUND_UP(efb->obj->base.size, PAGE_SIZE));
+
+		width = fb->width;
+		height = fb->height;
+
+		if (width <= 64 && height <= 64) {
+			if (width == 64 && height == 64 && fb->pitches[0] == 64 * 4) {
+				usb_hal->funcs->cursor_set(usb_hal, (u8 *)vmapping);
+			} else {
+				cursor_buf = kzalloc(64 * 64 * 4, GFP_KERNEL);
+				if (cursor_buf) {
+					for (y = 0; y < height; y++) {
+						memcpy(cursor_buf + y * 64 * 4,
+						       (u8 *)vmapping + y * fb->pitches[0],
+						       width * 4);
+					}
+					usb_hal->funcs->cursor_set(usb_hal, cursor_buf);
+					kfree(cursor_buf);
+				}
+			}
+		}
+
+		if (import_attach)
+			dma_buf_end_cpu_access(import_attach->dmabuf, DMA_FROM_DEVICE);
+
+		drm_framebuffer_put(&efb->base);
+	}
+
+	usb_hal->funcs->cursor_move(usb_hal, new_state->crtc_x, new_state->crtc_y);
+}
+
+static void msdisp_drm_cursor_plane_atomic_disable(struct drm_plane *plane,
+#if KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
+				      struct drm_atomic_state *state
+#else
+				      struct drm_plane_state *old_state
+#endif
+)
+{
+	struct msdisp_drm_pipeline *pipeline;
+	struct msdisp_usb_hal *usb_hal;
+
+	if (!plane)
+		return;
+
+	pipeline = get_pipeline_by_plane(plane);
+	if (!pipeline)
+		return;
+
+	usb_hal = pipeline->usb_hal;
+	if (!usb_hal)
+		return;
+
+	usb_hal->funcs->cursor_set(usb_hal, NULL);
+}
+
+static const struct drm_plane_helper_funcs msdisp_drm_cursor_plane_helper_funcs = {
+	.atomic_check = msdisp_drm_cursor_plane_atomic_check,
+	.atomic_update = msdisp_drm_cursor_plane_atomic_update,
+	.atomic_disable = msdisp_drm_cursor_plane_atomic_disable,
+#if KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
+	.prepare_fb = drm_gem_plane_helper_prepare_fb,
+#else
+	.prepare_fb = drm_gem_fb_prepare_fb,
+#endif
+};
+
 static const struct drm_plane_funcs msdisp_drm_plane_funcs = {
 	.update_plane = drm_atomic_helper_update_plane,
 	.disable_plane = drm_atomic_helper_disable_plane,
@@ -566,6 +745,7 @@ static struct drm_crtc* msdisp_drm_crtc_init(struct drm_device *dev)
 					  &msdisp_drm_plane_helper_funcs);
 
 	if (!primary_plane) {
+		kfree(crtc);
 		return NULL;
 	}
 
@@ -573,11 +753,29 @@ static struct drm_crtc* msdisp_drm_crtc_init(struct drm_device *dev)
 	drm_plane_enable_fb_damage_clips(primary_plane);
 #endif
 
+	cursor_plane = msdisp_drm_create_plane(dev, DRM_PLANE_TYPE_CURSOR,
+					 &msdisp_drm_cursor_plane_helper_funcs);
+	if (!cursor_plane) {
+		dev_warn(dev->dev, "Failed to create cursor plane\n");
+	}
+
 	status = drm_crtc_init_with_planes(dev, crtc,
 				primary_plane, cursor_plane,
 				&msdisp_drm_crtc_funcs,
 				NULL
 				);
+
+	if (status) {
+		dev_err(dev->dev, "Failed to init crtc with planes: %d\n", status);
+		drm_plane_cleanup(primary_plane);
+		kfree(primary_plane);
+		if (cursor_plane) {
+			drm_plane_cleanup(cursor_plane);
+			kfree(cursor_plane);
+		}
+		kfree(crtc);
+		return NULL;
+	}
 
 	drm_crtc_helper_add(crtc, &msdisp_drm_helper_funcs);
 

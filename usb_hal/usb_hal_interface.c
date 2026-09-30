@@ -655,7 +655,12 @@ int usb_hal_cursor_set(struct usb_hal* hal, u8* buf)
 	if (NULL == buf){
 		usb_dev->cursor_buf.valid = false;
 		mutex_unlock(&usb_dev->cursor_buf.mutex);
-        return 0;
+		memset(&event, 0, sizeof(event));
+		event.base.type = USB_HAL_EVENT_TYPE_UPDATE;
+		event.base.length = sizeof(event);
+		kfifo_in(usb_dev->fifo, &event, sizeof(event));
+		up(&usb_dev->sema);
+		return 0;
 	}
 
     memcpy(usb_dev->cursor_buf.buf, buf, USB_HAL_CURSOR_BUF_SIZE);

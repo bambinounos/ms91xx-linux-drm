@@ -23,7 +23,7 @@
 #include "msdisp_plat_dev.h"
 
 
-#define MOD_VER							"3.1.0"
+#define MOD_VER							"3.1.1"
 
 static ushort msdisp_initial_device_count = 1;
 module_param_named(initial_device_count,

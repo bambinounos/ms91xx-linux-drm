@@ -51,9 +51,9 @@ sudo ./dkms-install.sh
 Or manually:
 
 ```sh
-sudo rsync -a --delete --exclude .git ./ /usr/src/msdisp-3.1.0/
-sudo dkms add msdisp/3.1.0
-sudo dkms install msdisp/3.1.0
+sudo rsync -a --delete --exclude .git ./ /usr/src/msdisp-3.1.1/
+sudo dkms add msdisp/3.1.1
+sudo dkms install msdisp/3.1.1
 ```
 
 Plug the screen in (or unplug/replug it). The `usbdisp_usb` module auto-loads via
