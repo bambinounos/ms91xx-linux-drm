@@ -39,9 +39,9 @@
 
 #include "msdisp_drm_drv.h"
 
-static bool msdisp_hw_cursor = false;
+static bool msdisp_hw_cursor = true;
 module_param_named(hw_cursor, msdisp_hw_cursor, bool, 0644);
-MODULE_PARM_DESC(hw_cursor, "Enable hardware cursor plane (default: false, recommended false for Wayland)");
+MODULE_PARM_DESC(hw_cursor, "Enable hardware cursor plane (default: true)");
 #include "msdisp_drm_event.h"
 #include "msdisp_common_util.h"
 #include "msdisp_usb_interface.h"
@@ -460,7 +460,10 @@ static void msdisp_drm_cursor_plane_atomic_update(struct drm_plane *plane,
 	if (!plane || !new_state)
 		return;
 
-	pipeline = get_pipeline_by_plane(plane);
+	if (new_state->crtc)
+		pipeline = get_pipeline_by_crtc(new_state->crtc);
+	else
+		pipeline = get_pipeline_by_plane(plane);
 	if (!pipeline)
 		return;
 
@@ -698,8 +701,8 @@ int msdisp_drm_modeset_init(struct drm_device *dev)
 
 	drm_mode_config_init(dev);
 
-	dev->mode_config.min_width = 640;
-	dev->mode_config.min_height = 480;
+	dev->mode_config.min_width = 0;
+	dev->mode_config.min_height = 0;
 	dev->mode_config.max_width = 1920;
 	dev->mode_config.max_height = 1600;
 	if (msdisp_hw_cursor) {

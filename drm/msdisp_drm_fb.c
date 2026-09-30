@@ -192,7 +192,7 @@ struct drm_framebuffer *msdisp_drm_fb_user_fb_create(
 		return ERR_PTR(-EINVAL);
 	}
 
-	dev_info(dev->dev, "fb id:0x%x format:0x%x handle:0x%x width:%d height:%d pitch:%d\n",  \
+	dev_dbg(dev->dev, "fb id:0x%x format:0x%x handle:0x%x width:%d height:%d pitch:%d\n",  \
 		mode_cmd->fb_id, mode_cmd->pixel_format, mode_cmd->handles[0], mode_cmd->width, mode_cmd->height, mode_cmd->pitches[0]);
 
 	obj = drm_gem_object_lookup(file, mode_cmd->handles[0]);
