@@ -45,7 +45,7 @@ MODULE_IMPORT_NS("usbdisp_drm");
 MODULE_IMPORT_NS(usbdisp_drm);
 #endif
 
-#define MOD_VER							"3.1.1"
+#define MOD_VER							"3.1.2"
 #define MAX_CUSTOM_MODE_CNT				16
 
 struct custom_mode_stru {

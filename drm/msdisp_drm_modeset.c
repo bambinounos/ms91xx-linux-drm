@@ -35,9 +35,13 @@
 #endif
 
 #include <linux/dma-buf.h>
-
+#include <linux/moduleparam.h>
 
 #include "msdisp_drm_drv.h"
+
+static bool msdisp_hw_cursor = false;
+module_param_named(hw_cursor, msdisp_hw_cursor, bool, 0644);
+MODULE_PARM_DESC(hw_cursor, "Enable hardware cursor plane (default: false, recommended false for Wayland)");
 #include "msdisp_drm_event.h"
 #include "msdisp_common_util.h"
 #include "msdisp_usb_interface.h"
@@ -248,120 +252,12 @@ static void msdisp_drm_disable_vblank(struct drm_crtc *crtc)
 #endif
 
 
-static int
-msdisp_crtc_cursor_set(struct drm_crtc *crtc, struct drm_file *file_priv,
-		     uint32_t buffer_handle, uint32_t width, uint32_t height)
-{
-	int ret = 0;
-	void *vmapping;
-	struct msdisp_usb_hal* usb_hal;
-	struct drm_gem_object *obj;
-	struct msdisp_drm_gem_object *bo;
-	struct msdisp_drm_pipeline* pipeline = get_pipeline_by_crtc(crtc);
-	u8 *cursor_buf = NULL;
-	int y;
-
-	if (!pipeline) {
-		return ret;
-	}
-
-	usb_hal = pipeline->usb_hal;
-	if (!usb_hal) {
-		return ret;
-	}
-	if (buffer_handle == 0) {
-		usb_hal->funcs->cursor_set(usb_hal, NULL);
-		return 0;
-	}
-
-	/* Support any cursor size up to 64x64 (e.g. 24x24, 32x32, 48x48, 64x64) */
-	if (width > 64 || height > 64 || width == 0 || height == 0) {
-		printk("Cursor size %dx%d exceeds supported max 64x64\n", width, height);
-		return -EINVAL;
-	}
-
-	obj = drm_gem_object_lookup(file_priv, buffer_handle);
-	if (!obj) {
-		return -ENOENT;
-	}
-
-	if (obj->size < width * height * 4) {
-		printk("Cursor buffer is too small: size=%zu < %u\n", obj->size, width * height * 4);
-		ret = -EINVAL;
-		goto out_put;
-	}
-
-	bo = to_msdisp_drm_bo(obj);
-	ret = msdisp_drm_gem_vmap(bo);
-	if (ret) {
-		goto out_put;
-	}
-	vmapping = bo->vmapping;
-	if (!vmapping) {
-		ret = -ENOMEM;
-		goto out_vunmap;
-	}
-
-	if (width == 64 && height == 64) {
-		usb_hal->funcs->cursor_set(usb_hal, vmapping);
-	} else {
-		/* Pad smaller cursor into 64x64 transparent buffer so hardware blitter works */
-		cursor_buf = kzalloc(64 * 64 * 4, GFP_KERNEL);
-		if (!cursor_buf) {
-			ret = -ENOMEM;
-			goto out_vunmap;
-		}
-		for (y = 0; y < height; y++) {
-			memcpy(cursor_buf + y * 64 * 4, (u8 *)vmapping + y * width * 4, width * 4);
-		}
-		usb_hal->funcs->cursor_set(usb_hal, cursor_buf);
-		kfree(cursor_buf);
-	}
-
-out_vunmap:
-	msdisp_drm_gem_vunmap(bo);
-out_put:
-	drm_gem_object_put(obj);
-	return ret;
-}
-
-static int
-msdisp_crtc_cursor_set2(struct drm_crtc *crtc, struct drm_file *file_priv,
-		      uint32_t buffer_handle, uint32_t width, uint32_t height,
-		      int32_t hot_x, int32_t hot_y)
-{
-	return msdisp_crtc_cursor_set(crtc, file_priv, buffer_handle, width, height);
-}
-
-static int
-msdisp_crtc_cursor_move(struct drm_crtc *crtc, int x, int y)
-{
-	struct msdisp_drm_pipeline* pipeline = get_pipeline_by_crtc(crtc);
-	struct msdisp_usb_hal* usb_hal;
-
-	if (!pipeline) {
-		return 0;
-	}
-
-	usb_hal = pipeline->usb_hal;
-	if (!usb_hal) {
-		return 0;
-	}
-
-	usb_hal->funcs->cursor_move(usb_hal, x, y);
-
-	return 0;
-}
-
 static const struct drm_crtc_funcs msdisp_drm_crtc_funcs = {
 	.reset                  = drm_atomic_helper_crtc_reset,
 	.destroy                = msdisp_drm_crtc_destroy,
 	.set_config             = drm_atomic_helper_set_config,
 	.atomic_duplicate_state = drm_atomic_helper_crtc_duplicate_state,
 	.atomic_destroy_state   = drm_atomic_helper_crtc_destroy_state,
-	.cursor_set             = msdisp_crtc_cursor_set,
-	.cursor_set2            = msdisp_crtc_cursor_set2,
-	.cursor_move            = msdisp_crtc_cursor_move,
 #if KERNEL_VERSION(5, 11, 0) <= LINUX_VERSION_CODE || defined(RPI) || defined(EL8)
 	.enable_vblank          = msdisp_drm_enable_vblank,
 	.disable_vblank         = msdisp_drm_disable_vblank,
@@ -693,6 +589,7 @@ static const uint64_t format_modifiers[] = {
 
 static struct drm_plane *msdisp_drm_create_plane(
 		struct drm_device *dev,
+		uint32_t possible_crtcs,
 		enum drm_plane_type type,
 		const struct drm_plane_helper_funcs *helper_funcs)
 {
@@ -709,7 +606,7 @@ static struct drm_plane *msdisp_drm_create_plane(
 
 	ret = drm_universal_plane_init(dev,
 				       plane,
-				       0xFF,
+				       possible_crtcs,
 				       &msdisp_drm_plane_funcs,
 				       formats,
 				       ARRAY_SIZE(formats),
@@ -729,19 +626,20 @@ static struct drm_plane *msdisp_drm_create_plane(
 	return plane;
 }
 
-static struct drm_crtc* msdisp_drm_crtc_init(struct drm_device *dev)
+static struct drm_crtc* msdisp_drm_crtc_init(struct drm_device *dev, int pipe_idx)
 {
 	struct drm_crtc* crtc = NULL;
 	struct drm_plane *primary_plane = NULL;
 	struct drm_plane *cursor_plane = NULL;
 	int status = 0;
+	uint32_t possible_crtcs = (1 << pipe_idx);
 
 	crtc = kzalloc(sizeof(struct drm_crtc), GFP_KERNEL);
 	if (!crtc) {
 		return NULL;
 	}
 
-	primary_plane = msdisp_drm_create_plane(dev, DRM_PLANE_TYPE_PRIMARY,
+	primary_plane = msdisp_drm_create_plane(dev, possible_crtcs, DRM_PLANE_TYPE_PRIMARY,
 					  &msdisp_drm_plane_helper_funcs);
 
 	if (!primary_plane) {
@@ -753,10 +651,12 @@ static struct drm_crtc* msdisp_drm_crtc_init(struct drm_device *dev)
 	drm_plane_enable_fb_damage_clips(primary_plane);
 #endif
 
-	cursor_plane = msdisp_drm_create_plane(dev, DRM_PLANE_TYPE_CURSOR,
-					 &msdisp_drm_cursor_plane_helper_funcs);
-	if (!cursor_plane) {
-		dev_warn(dev->dev, "Failed to create cursor plane\n");
+	if (msdisp_hw_cursor) {
+		cursor_plane = msdisp_drm_create_plane(dev, possible_crtcs, DRM_PLANE_TYPE_CURSOR,
+						 &msdisp_drm_cursor_plane_helper_funcs);
+		if (!cursor_plane) {
+			dev_warn(dev->dev, "Failed to create cursor plane\n");
+		}
 	}
 
 	status = drm_crtc_init_with_planes(dev, crtc,
@@ -802,8 +702,13 @@ int msdisp_drm_modeset_init(struct drm_device *dev)
 	dev->mode_config.min_height = 480;
 	dev->mode_config.max_width = 1920;
 	dev->mode_config.max_height = 1600;
-	dev->mode_config.cursor_width = 64;
-	dev->mode_config.cursor_height = 64;
+	if (msdisp_hw_cursor) {
+		dev->mode_config.cursor_width = 64;
+		dev->mode_config.cursor_height = 64;
+	} else {
+		dev->mode_config.cursor_width = 0;
+		dev->mode_config.cursor_height = 0;
+	}
 	dev->mode_config.prefer_shadow = 0;
 	dev->mode_config.preferred_depth = 32;
 	//dev->mode_config.preferred_depth = 16;
@@ -812,7 +717,7 @@ int msdisp_drm_modeset_init(struct drm_device *dev)
 
 	pipeline_cnt = msdisp_drm_get_pipeline_init_count();
 	for (i = 0; i < pipeline_cnt; i++) {
-		crtc = msdisp_drm_crtc_init(dev);
+		crtc = msdisp_drm_crtc_init(dev, i);
 		if (!crtc) {
 			dev_err(dev->dev, "Failed to init crtc%d\n", i);
 			goto err;

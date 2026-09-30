@@ -148,17 +148,16 @@ static const struct drm_framebuffer_funcs msdisp_drmfb_funcs = {
 static int
 msdisp_drm_framebuffer_init(struct drm_device *dev,
 		      struct msdisp_drm_framebuffer *efb,
+#if KERNEL_VERSION(6, 15, 0) <= LINUX_VERSION_CODE
+		      const struct drm_format_info *info,
+#endif
 		      const struct drm_mode_fb_cmd2 *mode_cmd,
 		      struct msdisp_drm_gem_object *obj)
 {
 	efb->obj = obj;
 #if KERNEL_VERSION(6, 15, 0) <= LINUX_VERSION_CODE
 	/* fill_fb_struct takes the format info explicitly since 6.15 */
-	drm_helper_mode_fill_fb_struct(dev, &efb->base,
-				       drm_get_format_info(dev,
-							   mode_cmd->pixel_format,
-							   mode_cmd->modifier[0]),
-				       mode_cmd);
+	drm_helper_mode_fill_fb_struct(dev, &efb->base, info, mode_cmd);
 #else
 	drm_helper_mode_fill_fb_struct(dev, &efb->base, mode_cmd);
 #endif
@@ -215,9 +214,15 @@ struct drm_framebuffer *msdisp_drm_fb_user_fb_create(
 		goto err_no_mem;
 	efb->base.obj[0] = obj;
 
-	ret = msdisp_drm_framebuffer_init(dev, efb, mode_cmd, to_msdisp_drm_bo(obj));
-	if (ret)
+	ret = msdisp_drm_framebuffer_init(dev, efb,
+#if KERNEL_VERSION(6, 15, 0) <= LINUX_VERSION_CODE
+					  info,
+#endif
+					  mode_cmd, to_msdisp_drm_bo(obj));
+	if (ret) {
+		dev_err(dev->dev, "msdisp_drm_framebuffer_init failed: %d\n", ret);
 		goto err_inval;
+	}
 	return &efb->base;
 
  err_no_mem:

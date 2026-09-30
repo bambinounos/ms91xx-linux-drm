@@ -51,9 +51,9 @@ sudo ./dkms-install.sh
 Or manually:
 
 ```sh
-sudo rsync -a --delete --exclude .git ./ /usr/src/msdisp-3.1.1/
-sudo dkms add msdisp/3.1.1
-sudo dkms install msdisp/3.1.1
+sudo rsync -a --delete --exclude .git ./ /usr/src/msdisp-3.1.2/
+sudo dkms add msdisp/3.1.2
+sudo dkms install msdisp/3.1.2
 ```
 
 Plug the screen in (or unplug/replug it). The `usbdisp_usb` module auto-loads via
@@ -104,7 +104,7 @@ compositors silently ignore the device. All fixes are guarded with
 | `.fbdev_probe` implemented + GEM `.vmap`/`.vunmap` + `drm_client_setup()` (adapted for `drm_client_buffer_create_dumb()` and pre-allocated `fb_info` on 7.0+) — provides `/dev/fb0` and text console support | ≥ 6.10 |
 | `534d:6021` added to all three ID lookup tables; `port_type=` override; `custom_mode=` modes honoured with EDID fallback for standard HDMI — see [docs/MS912C-VGA.md](docs/MS912C-VGA.md) | all |
 | Plane atomic update fix: uses `plane->state->fb` instead of `old_state->fb` — resolves 1-frame delayed screen updates (input lag when typing) and black screen on resume | all |
-| Wayland mouse cursor fix: supports cursor sizes ≤ 64×64 (24×24, 32×32, 48×48) with transparent padding and fixes GEM refcount leak — cursor now visible in GNOME Wayland | all |
+| Wayland mouse cursor fix: default `hw_cursor=0` enables compositor software cursor (100% reliable across non-accelerated secondary GPUs under GNOME Mutter Wayland); `hw_cursor=1` enables universal cursor plane with proper `possible_crtcs = (1 << i)` and no legacy callback conflicts | all |
 | Hotplug uevents: `drm_kms_helper_hotplug_event()` triggered on probe, disconnect, and reset-resume so compositors immediately detect and repaint the display | all |
 | Vblank completion events: delivers pending vblank events on CRTC enable and drains queued events under `event_lock` — fixes dropped frame completions and drops idle compositor CPU from 100% to ~2% | all |
 | Frame transfer reliability: splits bulk frame transfers into 64KB chunks to avoid `-110`/`ETIMEDOUT` stalls on large frames; double-buffer index only advances on successful send to prevent ping-pong desync | all |
