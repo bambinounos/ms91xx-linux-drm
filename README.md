@@ -9,9 +9,7 @@ These chips power countless **brandless "lightweight" portable USB monitors** an
 **Chinese dual-screen / tri-screen laptop extenders** sold on AliExpress, Temu,
 Amazon, etc., as well as generic **USB 3.0 → HDMI/VGA adapters**.
 
-> ✅ Tested working on **Ubuntu 24.04 (Noble), kernel 6.17.0-35-generic, GNOME 46
-> Wayland** with a brandless dual-screen laptop monitor (MS9132 in single mode,
-> 1920×1080@60, USB 3 SuperSpeed) — both **mirror** and **extend** modes.
+> ✅ Tested working on **Ubuntu 24.04 (Noble)** and **Ubuntu 26.04 (Resolute)**, **kernels 6.8 → 7.0+**, **GNOME Wayland (46/47)** and **KDE Plasma (Wayland)** with brandless dual-screen laptop monitors (MS9132 single/dual mode, 1920×1080@60, USB 3 SuperSpeed) — both **mirror** and **extend** modes.
 
 ## Is this my device?
 
@@ -42,12 +40,20 @@ Typical symptoms before installing this driver:
 
 ## Install (DKMS, recommended)
 
+### Quick install (recommended)
+
 ```sh
 git clone https://github.com/bambinounos/ms91xx-linux-drm.git
 cd ms91xx-linux-drm
-sudo rsync -a --exclude .git ./ /usr/src/msdisp-3.0.3.13/
-sudo dkms add msdisp/3.0.3.13
-sudo dkms install msdisp/3.0.3.13
+sudo ./dkms-install.sh
+```
+
+Or manually:
+
+```sh
+sudo rsync -a --delete --exclude .git ./ /usr/src/msdisp-3.1.0/
+sudo dkms add msdisp/3.1.0
+sudo dkms install msdisp/3.1.0
 ```
 
 Plug the screen in (or unplug/replug it). The `usbdisp_usb` module auto-loads via
@@ -150,9 +156,7 @@ kernel 6.17, GNOME Wayland, modos espejo y extendido).
 ```sh
 git clone https://github.com/bambinounos/ms91xx-linux-drm.git
 cd ms91xx-linux-drm
-sudo rsync -a --exclude .git ./ /usr/src/msdisp-3.0.3.13/
-sudo dkms add msdisp/3.0.3.13
-sudo dkms install msdisp/3.0.3.13
+sudo ./dkms-install.sh
 ```
 
 Conecta la pantalla y listo: aparece como un monitor más. Consejos: nunca hagas
