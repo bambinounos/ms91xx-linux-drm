@@ -603,38 +603,58 @@ void usb_hal_dev_state_enable(struct usb_hal_dev* usb_dev, struct urb* data_urb,
 
 void usb_hal_state_machine(struct usb_hal_dev* usb_dev, struct urb* data_urb, unsigned char* zero_msg, int ep, struct kfifo* fifo)
 {
-    int len, ret;
+    int len;
 	struct usb_hal_event event;
 	bool bupdate = false;
 	ktime_t current_time;
+	long timeout;
+	s64 elapsed_ms;
+	long remaining_ms;
 
-    ret = down_timeout(&usb_dev->sema, 1);
+	/* Calculate remaining time until the next periodic idle refresh.
+	 * When idle, sleep in TASK_INTERRUPTIBLE (State S) instead of
+	 * busy-polling with 1ms uninterruptible sleeps (State D). */
+	current_time = ktime_get();
+	elapsed_ms = ktime_to_ms(ktime_sub(current_time, usb_dev->update_time));
+	remaining_ms = (long)usb_hal_idle_refresh_ms - (long)elapsed_ms;
+	if (remaining_ms <= 0)
+		remaining_ms = 10;
+	else if (remaining_ms > usb_hal_idle_refresh_ms)
+		remaining_ms = usb_hal_idle_refresh_ms;
+
+	timeout = msecs_to_jiffies(remaining_ms);
+
+	wait_event_interruptible_timeout(usb_dev->wait_queue,
+		!kfifo_is_empty(fifo) ||
+		(1 == atomic_read(&usb_dev->mouse_moving)) ||
+		!usb_dev->thread_run_flag ||
+		MS9132_USB_BUS_STATUS_SUSPEND == usb_dev->bus_status,
+		timeout);
+
     // if usb will be suspend, not process, until usb resume
 	if ( MS9132_USB_BUS_STATUS_SUSPEND == usb_dev->bus_status) {
 		return;
 	}
 
 	// event received, proc event
-    if (!ret) {
-        while ((len = kfifo_out(fifo, &event, sizeof(event)) != 0)) {
-            switch (usb_dev->state) {
-                case USB_HAL_DEV_STATE_UNKNOWN:
-                case USB_HAL_DEV_STATE_DISABLED:
-                    usb_hal_dev_state_unknown(usb_dev, &event);
-                    break;
+	while ((len = kfifo_out(fifo, &event, sizeof(event)) != 0)) {
+		switch (usb_dev->state) {
+			case USB_HAL_DEV_STATE_UNKNOWN:
+			case USB_HAL_DEV_STATE_DISABLED:
+				usb_hal_dev_state_unknown(usb_dev, &event);
+				break;
 
-                case USB_HAL_DEV_STATE_ENABLED:
-					if (USB_HAL_EVENT_TYPE_DISABLE == event.base.type) {
-						usb_hal_dev_do_disable(usb_dev, &event);
-					}
+			case USB_HAL_DEV_STATE_ENABLED:
+				if (USB_HAL_EVENT_TYPE_DISABLE == event.base.type) {
+					usb_hal_dev_do_disable(usb_dev, &event);
+				}
 
-					if (USB_HAL_EVENT_TYPE_UPDATE == event.base.type) {
-						bupdate = true;
-					}
-                    break;
-	        }
-        }
-    }
+				if (USB_HAL_EVENT_TYPE_UPDATE == event.base.type) {
+					bupdate = true;
+				}
+				break;
+		}
+	}
 
 	if (USB_HAL_DEV_STATE_ENABLED != usb_dev->state) return;
 	if (!bupdate) {
@@ -698,4 +718,5 @@ int usb_hal_state_machine_entry(void* data)
 void usb_hal_stop_thread(struct usb_hal_dev *usb_dev)
 {
     usb_dev->thread_run_flag = 0;
+    wake_up_interruptible(&usb_dev->wait_queue);
 }

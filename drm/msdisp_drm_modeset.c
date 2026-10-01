@@ -91,15 +91,15 @@ void msdisp_crtc_update_event(struct drm_crtc *crtc)
 
 	if (crtc->state->event) {
 		unsigned long flags;
-		struct drm_pending_vblank_event *pending;
 
 		crtc->state->event->pipe = drm_crtc_index(crtc);
 		spin_lock_irqsave(&dev->event_lock, flags);
-		pending = pipeline->event;
-		pipeline->event = crtc->state->event;
+		if (pipeline->event) {
+			drm_crtc_send_vblank_event(crtc, pipeline->event);
+			pipeline->event = NULL;
+		}
+		drm_crtc_send_vblank_event(crtc, crtc->state->event);
 		crtc->state->event = NULL;
-		if (pending)
-			drm_crtc_send_vblank_event(crtc, pending);
 		spin_unlock_irqrestore(&dev->event_lock, flags);
 	}
 }
@@ -143,6 +143,14 @@ int msdisp_drm_crtc_atomic_check(struct drm_crtc *crtc,
 	/* We always want to have an active plane with an active CRTC */
 	if (has_primary != crtc_state->enable)
 		return -EINVAL;
+
+#if KERNEL_VERSION(4, 18, 0) <= LINUX_VERSION_CODE
+	/* Tell DRM atomic helpers that this virtual USB display lacks hardware
+	 * rasterizer vblank interrupts. This prevents drm_atomic_helper_commit_tail()
+	 * from blocking synchronously in drm_atomic_helper_wait_for_vblanks(),
+	 * eliminating compositor stalls and multi-monitor freezes in Wayland. */
+	crtc_state->no_vblank = true;
+#endif
 
 	return drm_atomic_add_affected_planes(crtc_state->state, crtc);
 }

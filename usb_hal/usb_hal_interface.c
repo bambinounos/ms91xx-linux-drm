@@ -25,6 +25,7 @@
 #include <linux/usb.h>
 #include <linux/mutex.h>
 #include <linux/semaphore.h>
+#include <linux/wait.h>
 #include <linux/completion.h>
 #include <linux/scatterlist.h>
 #include <linux/kfifo.h>
@@ -271,6 +272,7 @@ int usb_hal_enable(struct usb_hal* hal, struct usb_hal_video_mode* mode, u32 fou
     event.para.enable.color_out = usb_dev->color_out;
 
     kfifo_in(usb_dev->fifo, &event, sizeof(event));
+	wake_up_interruptible(&usb_dev->wait_queue);
 	up(&usb_dev->sema);
 
     return 0;
@@ -290,6 +292,7 @@ int usb_hal_disable(struct usb_hal* hal)
     event.base.type = USB_HAL_EVENT_TYPE_DISABLE;
 	event.base.length =  sizeof(event);
     kfifo_in(usb_dev->fifo, &event, sizeof(event));
+	wake_up_interruptible(&usb_dev->wait_queue);
 	up(&usb_dev->sema);
 
     return 0;
@@ -613,6 +616,7 @@ int usb_hal_update_frame(struct usb_hal* hal, u8* buf, int pitch, u32 len, u32 f
     event.base.length = sizeof(event);
     event.para.update.len = cpy_len;
     kfifo_in(usb_dev->fifo, &event, sizeof(event));
+	wake_up_interruptible(&usb_dev->wait_queue);
 	up(&usb_dev->sema);
 
     return 0;
@@ -659,6 +663,7 @@ int usb_hal_cursor_set(struct usb_hal* hal, u8* buf)
 		event.base.type = USB_HAL_EVENT_TYPE_UPDATE;
 		event.base.length = sizeof(event);
 		kfifo_in(usb_dev->fifo, &event, sizeof(event));
+		wake_up_interruptible(&usb_dev->wait_queue);
 		up(&usb_dev->sema);
 		return 0;
 	}
@@ -732,7 +737,7 @@ int usb_hal_cursor_set(struct usb_hal* hal, u8* buf)
     event.base.type = USB_HAL_EVENT_TYPE_UPDATE;
     event.base.length = sizeof(event);
     kfifo_in(usb_dev->fifo, &event, sizeof(event));
-
+	wake_up_interruptible(&usb_dev->wait_queue);
 	up(&usb_dev->sema);
 
     return 0;
@@ -760,8 +765,10 @@ int usb_hal_cursor_move(struct usb_hal* hal, int x, int y)
     usb_dev->cursor_buf.y = y;
     atomic_set(&usb_dev->mouse_moving, 1); 
     usb_dev->mouse_updatetime = ktime_get();
-
     mutex_unlock(&usb_dev->cursor_buf.mutex);
+
+	wake_up_interruptible(&usb_dev->wait_queue);
+	up(&usb_dev->sema);
 
     return 0;
 }
@@ -1157,6 +1164,7 @@ struct usb_hal* usb_hal_init(struct usb_interface *interface, const struct usb_d
     mutex_init(&usb_dev->cursor_buf.mutex);
     
     sema_init(&usb_dev->sema, 1);
+    init_waitqueue_head(&usb_dev->wait_queue);
 
     memset(name, 0, 32);
 	snprintf(name, 32, "msdisp%d_send", index);

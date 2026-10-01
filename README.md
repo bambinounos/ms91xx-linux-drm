@@ -51,9 +51,9 @@ sudo ./dkms-install.sh
 Or manually:
 
 ```sh
-sudo rsync -a --delete --exclude .git ./ /usr/src/msdisp-3.1.3/
-sudo dkms add msdisp/3.1.3
-sudo dkms install msdisp/3.1.3
+sudo rsync -a --delete --exclude .git ./ /usr/src/msdisp-3.1.4/
+sudo dkms add msdisp/3.1.4
+sudo dkms install msdisp/3.1.4
 ```
 
 Plug the screen in (or unplug/replug it). The `usbdisp_usb` module auto-loads via
@@ -77,7 +77,7 @@ sudo insmod drm/usbdisp_usb.ko
 > the recipe avoids it, and a space-free symlink does not help either: make
 > resolves `CURDIR` to the physical path. `drm/Makefile` now fails early with a
 > message that names the real cause. **DKMS is unaffected** — it builds in
-> `/usr/src/msdisp-3.0.3.13`.
+> `/usr/src/msdisp-3.1.4`.
 
 ## What this fork fixes (vs. official V3.0.3.13)
 
@@ -105,6 +105,8 @@ compositors silently ignore the device. All fixes are guarded with
 | `534d:6021` added to all three ID lookup tables; `port_type=` override; `custom_mode=` modes honoured with EDID fallback for standard HDMI — see [docs/MS912C-VGA.md](docs/MS912C-VGA.md) | all |
 | Plane atomic update fix: uses `plane->state->fb` instead of `old_state->fb` — resolves 1-frame delayed screen updates (input lag when typing) and black screen on resume | all |
 | Wayland mouse cursor fix: default `hw_cursor=1` enables universal atomic cursor plane with dedicated per-pipe topology `possible_crtcs = (1 << i)` and direct CRTC pipeline routing — ensures cursor is rendered and visible under GNOME Mutter 50.1 Wayland multi-GPU setups where global software overlays are suppressed by the primary GPU; legacy callbacks removed to prevent DRM core validation warnings | all |
+| `msdisp0_send` State D and polling fix: replaced `down_timeout(&usb_dev->sema, 1)` busy-polling in `TASK_UNINTERRUPTIBLE` with `wait_event_interruptible_timeout` sleeping in `TASK_INTERRUPTIBLE` (State S). Eliminates false "I/O hang" alerts, drops context switches from 1,000/s to ~1/s, removes the artificial +1.0 load average penalty, and adds instant wakeups on cursor movements and frame submissions | all |
+| Wayland multi-monitor freeze fix: sets `crtc_state->no_vblank = true` so `drm_atomic_helper_wait_for_vblanks` does not block synchronously in kernel space; dispatches `drm_crtc_send_vblank_event` immediately in `atomic_flush` once the frame is queued, eliminating the 20ms artificial delay and freeing Mutter's frame clock to render all monitors without stutter or freezing | all |
 | Hotplug uevents: `drm_kms_helper_hotplug_event()` triggered on probe, disconnect, and reset-resume so compositors immediately detect and repaint the display | all |
 | Vblank completion events: delivers pending vblank events on CRTC enable and drains queued events under `event_lock` — fixes dropped frame completions and drops idle compositor CPU from 100% to ~2% | all |
 | Frame transfer reliability: splits bulk frame transfers into 64KB chunks to avoid `-110`/`ETIMEDOUT` stalls on large frames; double-buffer index only advances on successful send to prevent ping-pong desync | all |

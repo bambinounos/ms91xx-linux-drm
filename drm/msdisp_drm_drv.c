@@ -45,9 +45,9 @@
 #include "msdisp_drm_drv.h"
 #include "msdisp_plat_drv.h"
 
-static ushort msdisp_drm_vblank_timer_ms = 20;
+static ushort msdisp_drm_vblank_timer_ms = 16;
 module_param_named(vblank_timer_ms, msdisp_drm_vblank_timer_ms, ushort, 0644);
-MODULE_PARM_DESC(vblank_timer_ms, "Software vblank/frame-completion timer interval in ms (default: 20)");
+MODULE_PARM_DESC(vblank_timer_ms, "Software vblank/frame-completion timer interval in ms (default: 16)");
 
 static ushort msdisp_drm_initial_pipeline_count = 3;
 module_param_named(initial_pipeline_count,
