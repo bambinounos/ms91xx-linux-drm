@@ -272,9 +272,14 @@ static void usb_hal_combine_rects(struct usb_hal_dev* usb_dev, int left, int top
 		usb_dev->rect[i].bottom =  max(usb_dev->rect[i].bottom, bottom);
 
 		usb_dev->rect[i].left &= 0xFFC;
-		usb_dev->rect[i].right = (usb_dev->rect[i].right + 3) & 0xFFC;
+		/* Alignment must not extend the update past the packed image rows.
+		 * For example, a 1366-pixel row must never become a 1368-pixel
+		 * transfer: the YUV converter advances by mode.width per row. */
+		usb_dev->rect[i].right = min((usb_dev->rect[i].right + 3) & 0xFFC,
+					    usb_dev->mode.width);
 		usb_dev->rect[i].top &= 0xFFE;
-		usb_dev->rect[i].bottom = (usb_dev->rect[i].bottom + 1) & 0xFFE;
+		usb_dev->rect[i].bottom = min((usb_dev->rect[i].bottom + 1) & 0xFFE,
+					     usb_dev->mode.height);
 	}
 }
 
