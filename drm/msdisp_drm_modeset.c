@@ -451,9 +451,6 @@ static void msdisp_drm_cursor_plane_atomic_update(struct drm_plane *plane,
 #endif
 )
 {
-#if KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
-	struct drm_plane_state *old_state = drm_atomic_get_old_plane_state(state, plane);
-#endif
 	struct drm_plane_state *new_state = plane->state;
 	struct msdisp_drm_pipeline *pipeline;
 	struct msdisp_usb_hal *usb_hal;
@@ -463,7 +460,6 @@ static void msdisp_drm_cursor_plane_atomic_update(struct drm_plane *plane,
 	void *vmapping;
 	u8 *cursor_buf = NULL;
 	int y, width, height;
-	bool fb_changed;
 
 	if (!plane || !new_state)
 		return;
@@ -485,26 +481,26 @@ static void msdisp_drm_cursor_plane_atomic_update(struct drm_plane *plane,
 		return;
 	}
 
-	fb_changed = !old_state || (old_state->fb != fb) || !old_state->visible;
-
-	if (fb_changed) {
-		efb = to_msdisp_drm_fb(fb);
-		if (!efb || !efb->obj)
-			return;
-
+	/* Always refresh the 64x64 cursor bitmap when the cursor plane is
+	 * updated. Some compositors render cursor icon changes in-place into
+	 * an existing BO without changing the drm_framebuffer pointer, and
+	 * refreshing the 16 KB buffer ensures the cursor image is never stale
+	 * or lost after modeset. */
+	efb = to_msdisp_drm_fb(fb);
+	if (efb && efb->obj) {
 		drm_framebuffer_get(&efb->base);
 
 		if (!efb->obj->vmapping) {
 			if (msdisp_drm_gem_vmap(efb->obj)) {
 				drm_framebuffer_put(&efb->base);
-				return;
+				goto move_cursor;
 			}
 		}
 
 		vmapping = efb->obj->vmapping;
 		if (!vmapping) {
 			drm_framebuffer_put(&efb->base);
-			return;
+			goto move_cursor;
 		}
 
 		import_attach = efb->obj->base.import_attach;
@@ -540,6 +536,7 @@ static void msdisp_drm_cursor_plane_atomic_update(struct drm_plane *plane,
 		drm_framebuffer_put(&efb->base);
 	}
 
+move_cursor:
 	usb_hal->funcs->cursor_move(usb_hal, new_state->crtc_x, new_state->crtc_y);
 }
 

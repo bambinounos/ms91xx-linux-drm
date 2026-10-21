@@ -56,6 +56,8 @@ LOADED_VER=$(cat /sys/module/usbdisp_drm/version 2>/dev/null || echo "not loaded
 if [ "$LOADED_VER" = "$VERSION" ]; then
     echo "=== msdisp $VERSION successfully loaded into running kernel! ==="
 else
+    echo "=== WARNING: usbdisp_drm is currently in use by your active graphical session (loaded version: $LOADED_VER). ==="
+    echo "=== Please LOG OUT and log back in (or REBOOT) so version $VERSION takes effect! ==="
     echo "=== AVISO: El módulo usbdisp_drm sigue en uso por la sesión gráfica actual (versión cargada: $LOADED_VER). ==="
-    echo "=== Para que tome efecto el soporte de cursor (v$VERSION), es necesario CERRAR SESIÓN y volver a entrar (o REINICIAR el equipo). ==="
+    echo "=== Para que tome efecto la versión $VERSION, es necesario CERRAR SESIÓN y volver a entrar (o REINICIAR el equipo). ==="
 fi

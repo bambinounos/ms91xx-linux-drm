@@ -400,11 +400,11 @@ static int usb_hal_dev_send_frame(struct usb_hal_dev* usb_dev, struct urb* data_
 	usb_dev->stat.send_total++;
 	start_time = ktime_get();
 
+	mutex_lock(&usb_dev->usb_buf.mutex);
 	mutex_lock(&usb_dev->cursor_buf.mutex);
 	usb_hal_dev_draw_cursor(usb_dev);
 	mutex_unlock(&usb_dev->cursor_buf.mutex);
 
-	mutex_lock(&usb_dev->usb_buf.mutex);
 	usb_hal_update_change_rects(usb_dev);
 	if (usb_dev->rect[usb_dev->frame_index].left >= usb_dev->rect[usb_dev->frame_index].right) {
 			usb_dev->stat.empty_rect_skip++;

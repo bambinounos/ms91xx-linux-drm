@@ -51,9 +51,9 @@ sudo ./dkms-install.sh
 Or manually:
 
 ```sh
-sudo rsync -a --delete --exclude .git ./ /usr/src/msdisp-3.1.4/
-sudo dkms add msdisp/3.1.4
-sudo dkms install msdisp/3.1.4
+sudo rsync -a --delete --exclude .git ./ /usr/src/msdisp-3.1.5/
+sudo dkms add msdisp/3.1.5
+sudo dkms install msdisp/3.1.5
 ```
 
 Plug the screen in (or unplug/replug it). The `usbdisp_usb` module auto-loads via
@@ -77,7 +77,7 @@ sudo insmod drm/usbdisp_usb.ko
 > the recipe avoids it, and a space-free symlink does not help either: make
 > resolves `CURDIR` to the physical path. `drm/Makefile` now fails early with a
 > message that names the real cause. **DKMS is unaffected** — it builds in
-> `/usr/src/msdisp-3.1.4`.
+> `/usr/src/msdisp-3.1.5`.
 
 ## What this fork fixes (vs. official V3.0.3.13)
 
@@ -100,11 +100,11 @@ compositors silently ignore the device. All fixes are guarded with
 | `drm_legacy.h` deleted; missing `vmalloc.h` / `scatterlist.h` includes | ≥ 6.8 |
 | `struct_mutex` removed from `drm_device` (GEM locking is internal); explicit `drm_print.h` includes; `DRM_DEBUG_PRIME` → `drm_dbg_prime()` | ≥ 7.0 |
 | Makefiles: removed vestigial `KERNELRELEASE`/`include Kbuild` branch that **broke DKMS builds**; `$(PWD)` → `$(CURDIR)`; added `dkms.conf` | all |
-| `drm_do_get_edid()` guard lowered to ≥ 6.12 — Debian's `6.12.101+deb13` backports the 6.13 EDID API while still reporting 6.12, so the build failed | ≥ 6.12 (Debian) |
-| `.fbdev_probe` implemented + GEM `.vmap`/`.vunmap` + `drm_client_setup()` (adapted for `drm_client_buffer_create_dumb()` and pre-allocated `fb_info` on 7.0+) — provides `/dev/fb0` and text console support | ≥ 6.10 |
+| `drm_do_get_edid()` and `drm_fb_helper_alloc_info()` / `release_info()` guards lowered to ≥ 6.12 — Debian 13 (`6.12.x+deb13`) and stable `6.12.y` backport the 6.13 EDID and fbdev-helper changes while reporting 6.12 | ≥ 6.12 (Debian 13) |
+| `.fbdev_probe` implemented + GEM `.vmap`/`.vunmap` + `drm_client_setup()` (adapted for `drm_client_buffer_create_dumb()` on 6.18+ and pre-allocated `fb_info` on 6.12+) — provides `/dev/fb0` and text console support | ≥ 6.10 |
 | `534d:6021` added to all three ID lookup tables; `port_type=` override; `custom_mode=` modes honoured with EDID fallback for standard HDMI — see [docs/MS912C-VGA.md](docs/MS912C-VGA.md) | all |
 | Plane atomic update fix: uses `plane->state->fb` instead of `old_state->fb` — resolves 1-frame delayed screen updates (input lag when typing) and black screen on resume | all |
-| Wayland mouse cursor fix: default `hw_cursor=1` enables universal atomic cursor plane with dedicated per-pipe topology `possible_crtcs = (1 << i)` and direct CRTC pipeline routing — ensures cursor is rendered and visible under GNOME Mutter 50.1 Wayland multi-GPU setups where global software overlays are suppressed by the primary GPU; legacy callbacks removed to prevent DRM core validation warnings | all |
+| Wayland mouse cursor fix: default `hw_cursor=1` enables universal atomic cursor plane with dedicated per-pipe topology `possible_crtcs = (1 << i)` and direct CRTC pipeline routing — ensures cursor is rendered and visible under GNOME Mutter 50.1 Wayland multi-GPU setups where global software overlays are suppressed by the primary GPU; caches cursor bitmaps across async modeset enable and synchronizes cursor drawing under `usb_buf.mutex` | all |
 | `msdisp0_send` State D and polling fix: replaced `down_timeout(&usb_dev->sema, 1)` busy-polling in `TASK_UNINTERRUPTIBLE` with `wait_event_interruptible_timeout` sleeping in `TASK_INTERRUPTIBLE` (State S). Eliminates false "I/O hang" alerts, drops context switches from 1,000/s to ~1/s, removes the artificial +1.0 load average penalty, and adds instant wakeups on cursor movements and frame submissions | all |
 | Wayland multi-monitor freeze fix: sets `crtc_state->no_vblank = true` so `drm_atomic_helper_wait_for_vblanks` does not block synchronously in kernel space; dispatches `drm_crtc_send_vblank_event` immediately in `atomic_flush` once the frame is queued, eliminating the 20ms artificial delay and freeing Mutter's frame clock to render all monitors without stutter or freezing | all |
 | Hotplug uevents: `drm_kms_helper_hotplug_event()` triggered on probe, disconnect, and reset-resume so compositors immediately detect and repaint the display | all |
@@ -113,7 +113,8 @@ compositors silently ignore the device. All fixes are guarded with
 | Teardown memory leak: frees `cursor_buf`, `old_cursor_buf`, `desktop_buf`, and `image_buf` in `USB_HAL_BUF_TYPE_USB` path — saves ~5MB leaked on every disconnect/reload | all |
 | AMD GPU (`amdgpu`) host support: page-array import fallback for dmabuf exporters lacking `.vmap`, CPU cache invalidation via `drm_clflush_pages()`, `dma_buf_vmap_unlocked` on ≥ 6.2, `ARGB8888` and `DRM_FORMAT_MOD_LINEAR` modifier advertisement | all / ≥ 6.2 |
 | Panel mode 1024×600@60 (VIC 150) added to supported modes table | all |
-| Frame copy bounds check: `usb_hal_update_frame()` drops frames whose framebuffer is smaller than the active mode instead of copying past its end — fixes a kernel oops (page fault in `memcpy`) that took down the compositor on every resolution change | all |
+| Frame copy bounds check (PR #7): `usb_hal_update_frame()` drops frames whose framebuffer is smaller than the active mode instead of copying past its end — fixes a kernel oops (page fault in `memcpy`) that took down the compositor on resolution change | all |
+| Damage rectangle alignment clipping (PR #8): `usb_hal_combine_rects()` clamps aligned `right`/`bottom` coordinates to `mode.width`/`mode.height` — fixes diagonal image corruption and out-of-bounds reads on non-multiple-of-4 widths such as `1366×768` | all |
 
 The protocol/init logic is **untouched** — it is exactly the manufacturer's code.
 

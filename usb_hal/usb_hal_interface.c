@@ -620,16 +620,16 @@ int usb_hal_update_frame(struct usb_hal* hal, u8* buf, int pitch, u32 len, u32 f
                 buf += pitch;
             }
         }
+        cpy_len = (int)need;
     } else {
         cpy_len = usb_hal_yuv_copy(usb_dev, buf, len, desc);
     }
 
     usb_dev->desktop_buf.len = cpy_len;
-    mutex_unlock(&usb_buf->mutex);   
-
 	mutex_lock(&usb_dev->cursor_buf.mutex);
 	usb_dev->old_cursor_buf.valid = false;
 	mutex_unlock(&usb_dev->cursor_buf.mutex);
+    mutex_unlock(&usb_buf->mutex);   
 
     memset(&event, 0, sizeof(event));
     event.base.type = USB_HAL_EVENT_TYPE_UPDATE;
@@ -670,21 +670,24 @@ int usb_hal_cursor_set(struct usb_hal* hal, u8* buf)
 
     usb_dev = (struct usb_hal_dev*)hal->private;
 
-    if (usb_dev->state != USB_HAL_DEV_STATE_ENABLED) {
-        usb_dev->stat.state_error++;
-        return -EPERM;
-    }
-
+    /* Always cache the cursor bitmap into cursor_buf even if usb_dev->state
+     * is not yet USB_HAL_DEV_STATE_ENABLED (e.g. during initial atomic modeset
+     * when drm_atomic_helper_commit_planes runs before or concurrently with
+     * the async USB_HAL_EVENT_TYPE_ENABLE handler). Otherwise the initial
+     * cursor bitmap is dropped with -EPERM and never re-uploaded until the
+     * cursor shape changes. */
     mutex_lock(&usb_dev->cursor_buf.mutex);
 	if (NULL == buf){
 		usb_dev->cursor_buf.valid = false;
 		mutex_unlock(&usb_dev->cursor_buf.mutex);
-		memset(&event, 0, sizeof(event));
-		event.base.type = USB_HAL_EVENT_TYPE_UPDATE;
-		event.base.length = sizeof(event);
-		kfifo_in(usb_dev->fifo, &event, sizeof(event));
-		wake_up_interruptible(&usb_dev->wait_queue);
-		up(&usb_dev->sema);
+		if (usb_dev->state == USB_HAL_DEV_STATE_ENABLED) {
+			memset(&event, 0, sizeof(event));
+			event.base.type = USB_HAL_EVENT_TYPE_UPDATE;
+			event.base.length = sizeof(event);
+			kfifo_in(usb_dev->fifo, &event, sizeof(event));
+			wake_up_interruptible(&usb_dev->wait_queue);
+			up(&usb_dev->sema);
+		}
 		return 0;
 	}
 
@@ -704,7 +707,7 @@ int usb_hal_cursor_set(struct usb_hal* hal, u8* buf)
     for (x = USB_HAL_CURSOR_WIDTH; x > x1; x--) {
         if(usb_hal_find_valid_pixman(pbuf, 256, USB_HAL_CURSOR_HEIGHT))
         {
-            x2 = x + 1;
+            x2 = min(x + 1, USB_HAL_CURSOR_WIDTH);
             break;
         }
         pbuf -= 4;
@@ -731,7 +734,7 @@ int usb_hal_cursor_set(struct usb_hal* hal, u8* buf)
     for (y = USB_HAL_CURSOR_HEIGHT; y > y1; y--) {
         if(usb_hal_find_valid_pixman(pbuf, 4, x2 - x1))
         {
-            y2 = y + 1;
+            y2 = min(y + 1, USB_HAL_CURSOR_HEIGHT);
             break;
         }
         pbuf -= USB_HAL_CURSOR_WIDTH * 4;
@@ -753,19 +756,17 @@ int usb_hal_cursor_set(struct usb_hal* hal, u8* buf)
 
     mutex_unlock(&usb_dev->cursor_buf.mutex);
 
-    memset(&event, 0, sizeof(event));
-    event.base.type = USB_HAL_EVENT_TYPE_UPDATE;
-    event.base.length = sizeof(event);
-    kfifo_in(usb_dev->fifo, &event, sizeof(event));
-	wake_up_interruptible(&usb_dev->wait_queue);
-	up(&usb_dev->sema);
+    if (usb_dev->state == USB_HAL_DEV_STATE_ENABLED) {
+        atomic_set(&usb_dev->mouse_moving, 1);
+        wake_up_interruptible(&usb_dev->wait_queue);
+        up(&usb_dev->sema);
+    }
 
     return 0;
 }
 
 int usb_hal_cursor_move(struct usb_hal* hal, int x, int y)
 {
-    int cpy_len = 0;
     struct usb_hal_dev* usb_dev;
 
     if (!hal) {
@@ -773,22 +774,22 @@ int usb_hal_cursor_move(struct usb_hal* hal, int x, int y)
     }
 
     usb_dev = (struct usb_hal_dev*)hal->private;
-    if (usb_dev->state != USB_HAL_DEV_STATE_ENABLED) {
-        usb_dev->stat.state_error++;
-        return -EPERM;
-    }
-
-    cpy_len = usb_dev->mode.width * usb_dev->mode.height * 3; //assume format RGB and no pitch
 
     mutex_lock(&usb_dev->cursor_buf.mutex);
     usb_dev->cursor_buf.x = x;
     usb_dev->cursor_buf.y = y;
-    atomic_set(&usb_dev->mouse_moving, 1); 
+    if (usb_dev->state == USB_HAL_DEV_STATE_ENABLED) {
+        atomic_set(&usb_dev->mouse_moving, 1); 
+    }
     usb_dev->mouse_updatetime = ktime_get();
     mutex_unlock(&usb_dev->cursor_buf.mutex);
 
-	wake_up_interruptible(&usb_dev->wait_queue);
-	up(&usb_dev->sema);
+    if (usb_dev->state == USB_HAL_DEV_STATE_ENABLED) {
+        wake_up_interruptible(&usb_dev->wait_queue);
+        up(&usb_dev->sema);
+    } else {
+        usb_dev->stat.state_error++;
+    }
 
     return 0;
 }
