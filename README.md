@@ -51,15 +51,17 @@ sudo ./dkms-install.sh
 Or manually:
 
 ```sh
-sudo rsync -a --delete --exclude .git ./ /usr/src/msdisp-3.1.5/
-sudo dkms add msdisp/3.1.5
-sudo dkms install msdisp/3.1.5
+sudo rsync -a --delete --exclude .git ./ /usr/src/msdisp-3.1.6/
+sudo dkms add msdisp/3.1.6
+sudo dkms install msdisp/3.1.6
+sudo update-initramfs -u -k "$(uname -r)"   # or: sudo dracut -f
 ```
 
-Plug the screen in (or unplug/replug it). The `usbdisp_usb` module auto-loads via
-the USB modalias, a new DRM card appears, and your desktop (tested on GNOME
-Wayland/Mutter) lights the panel up like any other monitor. DKMS rebuilds the
-modules automatically on every kernel update.
+Plug the screen in (or unplug/replug it — if upgrading from an older loaded
+driver, **reboot** so the kernel releases the old `usbdisp_drm` module). The
+`usbdisp_usb` module auto-loads via the USB modalias, a new DRM card appears, and
+your desktop (tested on GNOME Wayland/Mutter) lights the panel up like any other
+monitor. DKMS rebuilds the modules automatically on every kernel update.
 
 ### Manual build (without DKMS)
 
@@ -77,7 +79,7 @@ sudo insmod drm/usbdisp_usb.ko
 > the recipe avoids it, and a space-free symlink does not help either: make
 > resolves `CURDIR` to the physical path. `drm/Makefile` now fails early with a
 > message that names the real cause. **DKMS is unaffected** — it builds in
-> `/usr/src/msdisp-3.1.5`.
+> `/usr/src/msdisp-3.1.6`.
 
 ## What this fork fixes (vs. official V3.0.3.13)
 
