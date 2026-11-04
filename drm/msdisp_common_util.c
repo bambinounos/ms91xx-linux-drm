@@ -47,11 +47,11 @@ void msdisp_common_save_buf_to_bmp(u8* buf, u32 width, u32 height, u32 cpp, stru
     }
 
     pos = fp->f_pos;
-    __kernel_write(fp, (void*)&fheader, sizeof(fheader), &pos);
+    kernel_write(fp, (void*)&fheader, sizeof(fheader), &pos);
     fp->f_pos = pos;
 
     pos = fp->f_pos;
-    __kernel_write(fp, (void*)&iheader, sizeof(iheader), &pos);
+    kernel_write(fp, (void*)&iheader, sizeof(iheader), &pos);
     fp->f_pos = pos;
 
 	if (lock) {
@@ -60,7 +60,7 @@ void msdisp_common_save_buf_to_bmp(u8* buf, u32 width, u32 height, u32 cpp, stru
 	
     for (i = height - 1; i >= 0; i--) {
         pos = fp->f_pos;
-        __kernel_write(fp, buf + i * width * cpp, width * cpp, &pos);
+        kernel_write(fp, buf + i * width * cpp, width * cpp, &pos);
         fp->f_pos = pos;
     }
 

@@ -44,7 +44,7 @@ static int msdisp_drm_user_framebuffer_dirty(
 		__always_unused unsigned int num_clips)
 {
 	struct drm_modeset_acquire_ctx ctx;
-	struct drm_atomic_state *state;
+	struct msdisp_atomic_state *state;
 	struct drm_plane *plane;
 	int ret = 0;
 
@@ -55,7 +55,7 @@ static int msdisp_drm_user_framebuffer_dirty(
 		 */
 		file_priv ? DRM_MODESET_ACQUIRE_INTERRUPTIBLE :	0);
 
-	state = drm_atomic_state_alloc(fb->dev);
+	state = msdisp_atomic_state_alloc(fb->dev);
 	if (!state) {
 		ret = -ENOMEM;
 		goto out;
@@ -86,14 +86,14 @@ retry:
 
 out:
 	if (ret == -EDEADLK) {
-		drm_atomic_state_clear(state);
+		msdisp_atomic_state_clear(state);
 		ret = drm_modeset_backoff(&ctx);
 		if (!ret)
 			goto retry;
 	}
 
 	if (state)
-		drm_atomic_state_put(state);
+		msdisp_atomic_state_put(state);
 
 	drm_modeset_drop_locks(&ctx);
 	drm_modeset_acquire_fini(&ctx);

@@ -113,7 +113,7 @@ static void msdisp_drm_crtc_destroy(struct drm_crtc *crtc)
 
 void msdisp_drm_crtc_atomic_flush(struct drm_crtc *crtc, 
 #if KERNEL_VERSION(5, 11, 0) <= LINUX_VERSION_CODE || defined(RPI) || defined(EL8)
-	struct drm_atomic_state *state
+	struct msdisp_atomic_state *state
 #else
 	struct drm_crtc_state *old_state
 #endif
@@ -126,7 +126,7 @@ void msdisp_drm_crtc_atomic_flush(struct drm_crtc *crtc,
 
 int msdisp_drm_crtc_atomic_check(struct drm_crtc *crtc, 
 #if KERNEL_VERSION(5, 11, 0) <= LINUX_VERSION_CODE || defined(RPI) || defined(EL8)
-	struct drm_atomic_state *state
+	struct msdisp_atomic_state *state
 #else
 	struct drm_crtc_state *new_state
 #endif
@@ -157,7 +157,7 @@ int msdisp_drm_crtc_atomic_check(struct drm_crtc *crtc,
 
 void msdisp_drm_crtc_atomic_enable(struct drm_crtc *crtc, 
 #if KERNEL_VERSION(5, 11, 0) <= LINUX_VERSION_CODE || defined(RPI) || defined(EL8)
-	struct drm_atomic_state *state
+	struct msdisp_atomic_state *state
 #else
 	struct drm_crtc_state *old_crtc_state
 #endif
@@ -204,7 +204,7 @@ out:
 
 void msdisp_drm_crtc_atomic_disable(struct drm_crtc *crtc, 
 #if KERNEL_VERSION(5, 11, 0) <= LINUX_VERSION_CODE || defined(RPI) || defined(EL8)
-	struct drm_atomic_state *state
+	struct msdisp_atomic_state *state
 #else
 	struct drm_crtc_state *old_crtc_state
 #endif
@@ -287,7 +287,7 @@ static int msdisp_drm_handle_damage(struct msdisp_drm_framebuffer *efb, struct m
 
 static void msdisp_drm_plane_atomic_update(struct drm_plane *plane,
 #if KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
-				     struct drm_atomic_state *atom_state
+				     struct msdisp_atomic_state *atom_state
 #else
 				     struct drm_plane_state *old_state
 #endif
@@ -411,7 +411,7 @@ static const struct drm_plane_helper_funcs msdisp_drm_plane_helper_funcs = {
 
 static int msdisp_drm_cursor_plane_atomic_check(struct drm_plane *plane,
 #if KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
-						struct drm_atomic_state *state
+						struct msdisp_atomic_state *state
 #else
 						struct drm_plane_state *new_plane_state
 #endif
@@ -420,7 +420,7 @@ static int msdisp_drm_cursor_plane_atomic_check(struct drm_plane *plane,
 #if KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
 	struct drm_plane_state *new_plane_state = drm_atomic_get_new_plane_state(state, plane);
 #else
-	struct drm_atomic_state *state = new_plane_state->state;
+	struct msdisp_atomic_state *state = new_plane_state->state;
 #endif
 	struct drm_crtc_state *crtc_state;
 
@@ -445,7 +445,7 @@ static int msdisp_drm_cursor_plane_atomic_check(struct drm_plane *plane,
 
 static void msdisp_drm_cursor_plane_atomic_update(struct drm_plane *plane,
 #if KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
-				     struct drm_atomic_state *state
+				     struct msdisp_atomic_state *state
 #else
 				     struct drm_plane_state *old_state
 #endif
@@ -542,7 +542,7 @@ move_cursor:
 
 static void msdisp_drm_cursor_plane_atomic_disable(struct drm_plane *plane,
 #if KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE
-				      struct drm_atomic_state *state
+				      struct msdisp_atomic_state *state
 #else
 				      struct drm_plane_state *old_state
 #endif
