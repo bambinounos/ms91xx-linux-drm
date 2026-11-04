@@ -38,6 +38,23 @@
 #else
 #include <drm/drm_irq.h>
 #endif
+
+/*
+ * Linux 7.2 renamed struct drm_atomic_state to struct drm_atomic_commit,
+ * along with its alloc/clear/put helpers. Use one name in the driver and
+ * map it to whichever the running kernel has.
+ */
+#if KERNEL_VERSION(7, 2, 0) <= LINUX_VERSION_CODE
+#define msdisp_atomic_state drm_atomic_commit
+#define msdisp_atomic_state_alloc drm_atomic_commit_alloc
+#define msdisp_atomic_state_clear drm_atomic_commit_clear
+#define msdisp_atomic_state_put drm_atomic_commit_put
+#else
+#define msdisp_atomic_state drm_atomic_state
+#define msdisp_atomic_state_alloc drm_atomic_state_alloc
+#define msdisp_atomic_state_clear drm_atomic_state_clear
+#define msdisp_atomic_state_put drm_atomic_state_put
+#endif
 #include <drm/drm_framebuffer.h>
 #include <drm/drm_crtc.h>
 #include <drm/drm_crtc_helper.h>
