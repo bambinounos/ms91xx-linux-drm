@@ -10,7 +10,7 @@ fi
 KVER="${1:-$(uname -r)}"
 
 echo "=== Uninstalling msdisp driver from DKMS ==="
-for v in $(dkms status msdisp 2>/dev/null | awk -F'[,/]' '{print $2}' | sort -u); do
+for v in $(dkms status msdisp 2>/dev/null | sed -E 's/^msdisp[,/] ?([^,:]+).*/\1/' | sort -u); do
     echo "Removing msdisp version $v from DKMS..."
     dkms remove "msdisp/$v" --all 2>/dev/null || true
     rm -rf "/usr/src/msdisp-$v"

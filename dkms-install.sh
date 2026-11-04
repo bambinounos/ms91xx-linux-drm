@@ -15,7 +15,7 @@ KVER="${1:-$(uname -r)}"
 echo "=== Installing msdisp driver version $VERSION for kernel $KVER ==="
 
 # 1. Clean up any obsolete/stale versions of msdisp in DKMS
-for v in $(dkms status msdisp 2>/dev/null | awk -F'[,/]' '{print $2}' | sort -u); do
+for v in $(dkms status msdisp 2>/dev/null | sed -E 's/^msdisp[,/] ?([^,:]+).*/\1/' | sort -u); do
     echo "Purging previous msdisp version $v from DKMS..."
     dkms remove "msdisp/$v" --all 2>/dev/null || true
     if [ "$v" != "$VERSION" ]; then
