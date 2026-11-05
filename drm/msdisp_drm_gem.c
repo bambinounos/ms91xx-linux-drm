@@ -443,6 +443,18 @@ void msdisp_drm_gem_free_object(struct drm_gem_object *gem_obj)
 #endif
 	obj->resv = NULL;
 	mutex_destroy(&obj->pages_lock);
+
+	/*
+	 * The .free callback owns releasing the GEM object and freeing the
+	 * driver struct, as drm_gem_shmem_free() does.
+	 * drm_gem_object_release() drops the shmem file that
+	 * drm_gem_object_init() allocated in msdisp_drm_gem_alloc_object();
+	 * without it that inode, its dentry and the kzalloc'd object leak on
+	 * every GEM free. It fini's gem_obj->_resv, which is distinct from the
+	 * driver's own obj->_resv fini'd above, so there is no double free.
+	 */
+	drm_gem_object_release(gem_obj);
+	kfree(obj);
 }
 
 /*
