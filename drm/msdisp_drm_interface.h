@@ -27,6 +27,8 @@ int msdisp_platform_get_plat_device_index(struct platform_device* plat_dev);
 struct drm_device* msdisp_drm_get_free_device(void);
 int msdisp_drm_get_drm_device_index(struct drm_device* drm);
 int msdisp_drm_get_free_pipeline_index(struct drm_device* drm);
+int msdisp_drm_acquire_free_pipeline(struct drm_device** out_drm);
+void msdisp_drm_release_pipeline(struct drm_device* drm, int pipeline_index);
 int msdisp_drm_register_usb_hal(struct drm_device* drm, int pipeline_index, struct msdisp_usb_hal* usb_hal);
 int msdisp_drm_unregister_usb_hal(struct drm_device* drm, int pipeline_index);
 struct kfifo* msdisp_drm_get_kfifo(struct drm_device* drm, int pipeline_index);

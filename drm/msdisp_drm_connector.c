@@ -204,11 +204,16 @@ msdisp_drm_detect(struct drm_connector *connector, __always_unused bool force)
         dev_info(connector->dev->dev, "status changed! old:%d new:%d\n", msdisp_connector->status, status);
     }
     
-    /* get edid when first checked */
-    if ((connector_status_connected != msdisp_connector->status) && (connector_status_connected == status)) {
+    /* Refresh EDID on first connect or whenever a USB adapter was re-bound
+     * to this pipeline (e.g. rapid USB re-enumeration or swapping adapters). */
+    if ((connector_status_connected == status) &&
+        ((connector_status_connected != msdisp_connector->status) ||
+         msdisp_connector->force_edid_refresh)) {
         if (msdisp_connector->edid) {
             kfree(msdisp_connector->edid);
+            msdisp_connector->edid = NULL;
         }
+        msdisp_connector->force_edid_refresh = false;
 
 #if KERNEL_VERSION(6, 12, 0) <= LINUX_VERSION_CODE
         /* drm_do_get_edid() was removed in 6.13; read via drm_edid and
@@ -244,6 +249,13 @@ msdisp_drm_detect(struct drm_connector *connector, __always_unused bool force)
              * (added unconditionally in msdisp_drm_get_modes) drive it. */
             DRM_ERROR("get edid failed! (continuing without EDID, using custom_mode if set)\n");
         }
+    } else if (connector_status_connected != status) {
+        if (msdisp_connector->edid) {
+            kfree(msdisp_connector->edid);
+            msdisp_connector->edid = NULL;
+            drm_connector_update_edid_property(connector, NULL);
+        }
+        msdisp_connector->force_edid_refresh = true;
     }
 
     msdisp_connector->status = status;
@@ -323,5 +335,6 @@ struct msdisp_drm_connector* msdisp_drm_connector_init(struct drm_device *dev, s
 
 	msdisp_conn->status = connector_status_unknown;
 	msdisp_conn->pipeline_index = index;
+	msdisp_conn->force_edid_refresh = true;
 	return msdisp_conn;
 }

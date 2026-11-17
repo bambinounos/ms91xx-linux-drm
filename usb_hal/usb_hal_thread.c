@@ -698,12 +698,14 @@ int usb_hal_state_machine_entry(void* data)
 
 	zero_msg = kmalloc(8, GFP_KERNEL);
 	if (!zero_msg){
+		complete(&usb_dev->thread_done);
 		return -ENOMEM;
 	}
 
 	data_urb = usb_alloc_urb(0, GFP_KERNEL);
 	if (!data_urb) {
 		kfree(zero_msg);
+		complete(&usb_dev->thread_done);
 		return -ENOMEM;
 	}
 
@@ -716,6 +718,7 @@ int usb_hal_state_machine_entry(void* data)
 
 	usb_free_urb(data_urb);
 	kfree(zero_msg);
+	complete(&usb_dev->thread_done);
 
     return 0;
 }

@@ -21,6 +21,7 @@
 #include <linux/kthread.h>
 #include <linux/semaphore.h>
 #include <linux/wait.h>
+#include <linux/completion.h>
 
 #include "usb_hal_interface.h"
 
@@ -112,6 +113,7 @@ struct usb_hal_dev {
     volatile int thread_run_flag;
     struct semaphore sema;
     wait_queue_head_t wait_queue;
+    struct completion thread_done;
     struct task_struct* thread;
     int index;
     u8 vpack_in;

@@ -471,13 +471,13 @@ static void msdisp_drm_cursor_plane_atomic_update(struct drm_plane *plane,
 	if (!pipeline)
 		return;
 
-	usb_hal = pipeline->usb_hal;
-	if (!usb_hal)
-		return;
-
 	fb = new_state->fb;
 	if (!fb || !new_state->visible) {
-		usb_hal->funcs->cursor_set(usb_hal, NULL);
+		mutex_lock(&pipeline->hal_lock);
+		usb_hal = pipeline->usb_hal;
+		if (usb_hal)
+			usb_hal->funcs->cursor_set(usb_hal, NULL);
+		mutex_unlock(&pipeline->hal_lock);
 		return;
 	}
 
@@ -504,8 +504,12 @@ static void msdisp_drm_cursor_plane_atomic_update(struct drm_plane *plane,
 		}
 
 		import_attach = efb->obj->base.import_attach;
-		if (import_attach)
-			dma_buf_begin_cpu_access(import_attach->dmabuf, DMA_FROM_DEVICE);
+		if (import_attach) {
+			if (dma_buf_begin_cpu_access(import_attach->dmabuf, DMA_FROM_DEVICE)) {
+				drm_framebuffer_put(&efb->base);
+				goto move_cursor;
+			}
+		}
 
 		if (import_attach && efb->obj->pages)
 			drm_clflush_pages(efb->obj->pages, DIV_ROUND_UP(efb->obj->base.size, PAGE_SIZE));
@@ -515,7 +519,11 @@ static void msdisp_drm_cursor_plane_atomic_update(struct drm_plane *plane,
 
 		if (width <= 64 && height <= 64) {
 			if (width == 64 && height == 64 && fb->pitches[0] == 64 * 4) {
-				usb_hal->funcs->cursor_set(usb_hal, (u8 *)vmapping);
+				mutex_lock(&pipeline->hal_lock);
+				usb_hal = pipeline->usb_hal;
+				if (usb_hal)
+					usb_hal->funcs->cursor_set(usb_hal, (u8 *)vmapping);
+				mutex_unlock(&pipeline->hal_lock);
 			} else {
 				cursor_buf = kzalloc(64 * 64 * 4, GFP_KERNEL);
 				if (cursor_buf) {
@@ -524,7 +532,11 @@ static void msdisp_drm_cursor_plane_atomic_update(struct drm_plane *plane,
 						       (u8 *)vmapping + y * fb->pitches[0],
 						       width * 4);
 					}
-					usb_hal->funcs->cursor_set(usb_hal, cursor_buf);
+					mutex_lock(&pipeline->hal_lock);
+					usb_hal = pipeline->usb_hal;
+					if (usb_hal)
+						usb_hal->funcs->cursor_set(usb_hal, cursor_buf);
+					mutex_unlock(&pipeline->hal_lock);
 					kfree(cursor_buf);
 				}
 			}
@@ -537,7 +549,11 @@ static void msdisp_drm_cursor_plane_atomic_update(struct drm_plane *plane,
 	}
 
 move_cursor:
-	usb_hal->funcs->cursor_move(usb_hal, new_state->crtc_x, new_state->crtc_y);
+	mutex_lock(&pipeline->hal_lock);
+	usb_hal = pipeline->usb_hal;
+	if (usb_hal)
+		usb_hal->funcs->cursor_move(usb_hal, new_state->crtc_x, new_state->crtc_y);
+	mutex_unlock(&pipeline->hal_lock);
 }
 
 static void msdisp_drm_cursor_plane_atomic_disable(struct drm_plane *plane,
@@ -558,11 +574,11 @@ static void msdisp_drm_cursor_plane_atomic_disable(struct drm_plane *plane,
 	if (!pipeline)
 		return;
 
+	mutex_lock(&pipeline->hal_lock);
 	usb_hal = pipeline->usb_hal;
-	if (!usb_hal)
-		return;
-
-	usb_hal->funcs->cursor_set(usb_hal, NULL);
+	if (usb_hal)
+		usb_hal->funcs->cursor_set(usb_hal, NULL);
+	mutex_unlock(&pipeline->hal_lock);
 }
 
 static const struct drm_plane_helper_funcs msdisp_drm_cursor_plane_helper_funcs = {

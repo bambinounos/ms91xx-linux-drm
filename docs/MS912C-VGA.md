@@ -35,10 +35,16 @@ Install as usual (see the main README), then create
 `/etc/modprobe.d/usbdisp.conf`:
 
 ```
-options usbdisp_usb port_type=2 custom_mode=1_640x480@60,4_1280x720@60
+options usbdisp_usb port_type=534d:6021:2 custom_mode=534d:6021:1_640x480@60,534d:6021:4_1280x720@60
 ```
 
-Both options are required on this hardware, for unrelated reasons.
+Both options are required on this hardware, for unrelated reasons. The optional
+`534d:6021:` `vid:pid:` prefix scopes both overrides exclusively to the VGA
+dongle so that plugging a standard `345f:9132` HDMI USB monitor into the same
+machine at the same time keeps its native HDMI port type and 1080p EDID modes
+(unprefixed `port_type=2 custom_mode=1_640x480@60,...` continues to work too as
+a global fallback, and each USB interface also exposes writable `port_type` and
+`custom_mode` sysfs files for per-port udev rules).
 
 ### `port_type=2` — the VGA DAC is otherwise never powered on
 

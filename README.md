@@ -51,9 +51,9 @@ sudo ./dkms-install.sh
 Or manually:
 
 ```sh
-sudo rsync -a --delete --exclude .git ./ /usr/src/msdisp-3.1.6/
-sudo dkms add msdisp/3.1.6
-sudo dkms install msdisp/3.1.6
+sudo rsync -a --delete --exclude .git ./ /usr/src/msdisp-3.1.7/
+sudo dkms add msdisp/3.1.7
+sudo dkms install msdisp/3.1.7
 sudo update-initramfs -u -k "$(uname -r)"   # or: sudo dracut -f
 ```
 
@@ -79,7 +79,7 @@ sudo insmod drm/usbdisp_usb.ko
 > the recipe avoids it, and a space-free symlink does not help either: make
 > resolves `CURDIR` to the physical path. `drm/Makefile` now fails early with a
 > message that names the real cause. **DKMS is unaffected** — it builds in
-> `/usr/src/msdisp-3.1.6`.
+> `/usr/src/msdisp-3.1.7`.
 
 ## What this fork fixes (vs. official V3.0.3.13)
 
@@ -117,6 +117,7 @@ compositors silently ignore the device. All fixes are guarded with
 | Panel mode 1024×600@60 (VIC 150) added to supported modes table | all |
 | Frame copy bounds check (PR #7): `usb_hal_update_frame()` drops frames whose framebuffer is smaller than the active mode instead of copying past its end — fixes a kernel oops (page fault in `memcpy`) that took down the compositor on resolution change | all |
 | Damage rectangle alignment clipping (PR #8): `usb_hal_combine_rects()` clamps aligned `right`/`bottom` coordinates to `mode.width`/`mode.height` — fixes diagonal image corruption and out-of-bounds reads on non-multiple-of-4 widths such as `1366×768` | all |
+| Multi-adapter & hotplug hardening: atomic DRM pipeline reservation across concurrent USB probes, per-device VID:PID-scoped `port_type=` / `custom_mode=` (`[<vid>:<pid>:]...`) and writable per-interface sysfs attributes so heterogeneous adapters (e.g. `345f:9132` HDMI + `534d:6021` VGA) coexist without overriding each other, `hal_lock` protection on cursor plane updates during hot-unplug, synchronous kthread completion on disconnect, and fresh EDID re-reads on pipeline reuse | all |
 
 The protocol/init logic is **untouched** — it is exactly the manufacturer's code.
 

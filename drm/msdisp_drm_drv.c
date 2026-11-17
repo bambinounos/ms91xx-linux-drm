@@ -200,7 +200,9 @@ static int msdisp_drm_init(struct msdisp_drm_device *msdisp)
 	int i;
 	int ret = -ENOMEM;
 
+	mutex_init(&msdisp->pipeline_lock);
 	for (i = 0; i < msdisp->pipeline_cnt; i++) {
+		msdisp->pipeline[i].occupied = 0;
 		msdisp->pipeline[i].drm_status = MSDISP_DRM_STATUS_DISABLE;
 		mutex_init(&msdisp->pipeline[i].hal_lock);
 	}
@@ -292,8 +294,10 @@ struct drm_device *msdisp_drm_device_create(struct device *parent)
 	struct drm_device *drm = NULL;
 	int ret, i, alloc_fifo_cnt = 0;
 
-	if (msdisp_drm_initial_pipeline_count > MSDISP_DRM_MAX_PIPELINE_CNT) {
-		printk("%s: Max pipeline is :%d module param is:%d\n", __func__, MSDISP_DRM_MAX_PIPELINE_CNT, msdisp_drm_initial_pipeline_count);
+	if (msdisp_drm_initial_pipeline_count < 1 ||
+	    msdisp_drm_initial_pipeline_count > MSDISP_DRM_MAX_PIPELINE_CNT) {
+		printk("%s: Valid pipeline range is 1..%d, module param is:%d\n",
+		       __func__, MSDISP_DRM_MAX_PIPELINE_CNT, msdisp_drm_initial_pipeline_count);
 		return NULL;
 	}
 
@@ -315,7 +319,7 @@ struct drm_device *msdisp_drm_device_create(struct device *parent)
 			ret = -ENOMEM;
 			goto err_free;
 		}
-		alloc_fifo_cnt = i;
+		alloc_fifo_cnt = i + 1;
 	}
 	
 	ret = msdisp_drm_init(msdisp_drm);

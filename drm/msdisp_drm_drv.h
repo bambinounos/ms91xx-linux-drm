@@ -115,6 +115,7 @@ struct msdisp_drm_pipeline {
 	struct kfifo fifo;
 	struct msdisp_drm_frame_stat frame_stat;
 	volatile unsigned int dump_fb_flag;
+	int occupied;
 	int reg_flag;
 	int drm_status;
 	int drm_width;
@@ -128,6 +129,7 @@ struct msdisp_drm_device {
 	struct drm_device drm; //must be first field, so, drmm_add_final_kfree is not needed
 	struct timer_list vblank_timer;
 	struct device *parent;
+	struct mutex pipeline_lock;
 	int pipeline_cnt;
 	struct msdisp_drm_pipeline pipeline[MSDISP_DRM_MAX_PIPELINE_CNT];
 };

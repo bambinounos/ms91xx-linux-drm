@@ -80,6 +80,7 @@ struct usb_hal {
 };
 
 struct usb_hal* usb_intf_device_to_hal_func(struct device* dev);
+void msdisp_usb_notify_hotplug(struct device* dev);
 
 struct usb_hal* usb_hal_init(struct usb_interface *interface, const struct usb_device_id *id, struct kfifo* fifo, u32 index);
 void usb_hal_destroy(struct usb_hal* hal);
@@ -97,6 +98,8 @@ int usb_hal_cursor_move(struct usb_hal* usb_hal, int x, int y);
 int usb_hal_is_support_fourcc(u32 fourcc);
 unsigned int usb_hal_get_bpp_by_fourcc(u32 fourcc);
 int usb_hal_add_custom_mode(struct usb_hal* hal, int width, int height, int rate, unsigned char vic);
+void usb_hal_clear_custom_modes(struct usb_hal* hal);
+int usb_hal_set_port_type(struct usb_hal* hal, int new_port_type);
 void usb_hal_init_gpio(struct usb_hal* hal);
 void usb_hal_resume_gpio(struct usb_hal* hal);
 void usb_hal_read_custom_timing(struct usb_hal* hal);

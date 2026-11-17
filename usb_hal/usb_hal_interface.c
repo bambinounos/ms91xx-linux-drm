@@ -44,12 +44,12 @@
 void usb_hal_sysfs_init(struct usb_interface *interface);
 void usb_hal_sysfs_exit(struct usb_interface *interface);
 
-static int port_type_override = -1;
-module_param_named(port_type, port_type_override, int, S_IRUGO);
+static char *port_type_param = NULL;
+module_param_named(port_type, port_type_param, charp, S_IRUGO);
 MODULE_PARM_DESC(port_type,
-	"Override the detected video output port type (see VIDEO_PORT_* in "
-	"usb_hal_chip.h): 0=CVBS 1=SVIDEO 2=VGA 3=YPBPR 4=CVBS_SVIDEO 5=HDMI "
-	"6=DIGITAL. -1 (default) = trust the chip's port register.");
+	"Override video output port type globally or per VID:PID: "
+	"<port> or [<vid>:<pid>:]<port>[,...] (0=CVBS 1=SVIDEO 2=VGA 3=YPBPR "
+	"4=CVBS_SVIDEO 5=HDMI 6=DIGITAL, -1=autodetect; e.g. 2 or 534d:6021:2)");
 
 #define USB_HAL_COLOR_FORMAT_RGB                0
 #define USB_HAL_COLOR_FORMAT_YUV                1
@@ -817,6 +817,19 @@ int usb_hal_add_custom_mode(struct usb_hal* hal, int width, int height, int rate
     return 0;
 }
 
+void usb_hal_clear_custom_modes(struct usb_hal* hal)
+{
+    struct usb_hal_dev* usb_dev;
+
+    if (!hal) {
+        return;
+    }
+
+    usb_dev = (struct usb_hal_dev*)hal->private;
+    memset(usb_dev->custom_mode, 0, sizeof(usb_dev->custom_mode));
+    usb_dev->custom_mode_cnt = 0;
+}
+
 static void usb_hal_free_buf(struct usb_hal_dev* usb_dev)
 {
     if (!usb_dev->usb_buf.buf) {
@@ -1044,9 +1057,96 @@ static struct device * usb_hal_intf_get_dma_device(struct usb_interface *intf)
 #endif
 }
 
+static int usb_hal_resolve_port_type_override(const char *param_str, u16 vid, u16 pid)
+{
+	const char *p = param_str;
+	int default_override = -1;
+
+	if (!p || !*p)
+		return -1;
+
+	while (*p) {
+		char tok[64];
+		size_t len = 0;
+		const char *comma;
+		unsigned int m_vid = 0, m_pid = 0;
+		int val = -1;
+		char trailing = 0;
+
+		while (*p == ' ' || *p == '\t' || *p == ',')
+			p++;
+		if (!*p)
+			break;
+
+		comma = strchr(p, ',');
+		len = comma ? (size_t)(comma - p) : strlen(p);
+		while (len > 0 && (p[len - 1] == ' ' || p[len - 1] == '\t' ||
+				   p[len - 1] == '\n' || p[len - 1] == '\r'))
+			len--;
+
+		if (len > 0 && len < sizeof(tok)) {
+			memcpy(tok, p, len);
+			tok[len] = '\0';
+
+			if (strchr(tok, ':')) {
+				if (sscanf(tok, "%x:%x:%d%c", &m_vid, &m_pid, &val, &trailing) == 3 &&
+				    m_vid <= 0xffff && m_pid <= 0xffff) {
+					if ((u16)m_vid == vid && (u16)m_pid == pid)
+						return val;
+				}
+			} else {
+				if (sscanf(tok, "%d%c", &val, &trailing) == 1)
+					default_override = val;
+			}
+		}
+
+		if (!comma)
+			break;
+		p = comma + 1;
+	}
+
+	return default_override;
+}
+
+int usb_hal_set_port_type(struct usb_hal* usb_hal, int new_port_type)
+{
+	struct usb_hal_dev* usb_dev;
+	struct usb_device* udev;
+	int ret;
+
+	if (!usb_hal)
+		return -EINVAL;
+
+	usb_dev = (struct usb_hal_dev*)usb_hal->private;
+	udev = usb_dev->udev;
+
+	if (new_port_type < 0 || new_port_type >= VIDEO_PORT_MAX) {
+		dev_err(&udev->dev, "port_type override %d out of range (0-%d)\n",
+			new_port_type, VIDEO_PORT_MAX - 1);
+		return -EINVAL;
+	}
+
+	dev_info(&udev->dev, "video port type overridden: %d -> %d\n",
+		 usb_hal->port_type, new_port_type);
+	usb_hal->port_type = (u8)new_port_type;
+
+	/* Push the override into MS9132_XDATA_REG_VIDEO_PORT (xdata 0x31) too:
+	 * on-chip firmware reads this volatile register when programming its
+	 * video timing generator during the enable sequence. */
+	ret = usb_dev->hal_dev->funcs->xdata_write_byte(udev,
+			MS9132_XDATA_REG_VIDEO_PORT, (u8)new_port_type);
+	if (ret) {
+		dev_err(&udev->dev, "write video port register failed! ret=%d\n", ret);
+		return -ENOENT;
+	}
+
+	return 0;
+}
+
 static int usb_dev_hal_init(struct usb_hal* usb_hal)
 {
 	int ret = 0;
+	int resolved_port_override;
     struct usb_hal_dev* usb_dev = (struct usb_hal_dev*)usb_hal->private;
 	struct usb_device *udev = usb_dev->udev;
 
@@ -1062,42 +1162,19 @@ static int usb_dev_hal_init(struct usb_hal* usb_hal)
 		return -ENOENT;
 	}
 
-	/* Some dongles report a bogus VIDEO_PORT_* in the chip's port register.
-	 * Observed on this 534d:6021 / MS912C adapter: the register reads 1
-	 * (VIDEO_PORT_SVIDEO) even though the physical connector is VGA. That
-	 * matters because ms9132_set_screen_enable()'s non-9132 switch has no
-	 * case for VIDEO_PORT_SVIDEO, so it falls to default (xdata 0xf004 bit
-	 * 0x2 -- the CVBS/S-Video output enable) instead of the VIDEO_PORT_VGA
-	 * case (xdata 0xf004 bit 0x80 -- the VGA DAC enable). Everything else
-	 * works (frames stream over USB, chip ACKs them) but the VGA DAC is
-	 * never powered on, so the monitor sees no signal at all.
-	 * port_type=<n> overrides the detected value; -1 keeps autodetection. */
-	if (port_type_override >= 0) {
-		if (port_type_override >= VIDEO_PORT_MAX) {
-			dev_err(&udev->dev, "port_type override %d out of range (0-%d)\n",
-				port_type_override, VIDEO_PORT_MAX - 1);
-			return -EINVAL;
-		}
-		dev_info(&udev->dev, "video port type overridden: %d -> %d\n",
-			 usb_hal->port_type, port_type_override);
-		usb_hal->port_type = (u8)port_type_override;
-
-		/* Overriding our own copy is not enough: the chip's firmware
-		 * reads the very same port register (MS9132_XDATA_REG_VIDEO_PORT,
-		 * xdata 0x31) when it programs its video timing generator during
-		 * the enable sequence. Left at 1 (S-Video) it emits S-Video-style
-		 * timing that a VGA monitor cannot lock onto -- the DAC is on
-		 * (see above) but the monitor still reports "no signal" and
-		 * sleeps. The register is plain writable xdata, so push the
-		 * override into the chip too. It lives in volatile RAM and resets
-		 * with the dongle's power, hence re-applying it on every init.
-		 * Verified on this MS912C: with 0x31 = 2 the console shows up. */
-		ret = usb_dev->hal_dev->funcs->xdata_write_byte(udev,
-				MS9132_XDATA_REG_VIDEO_PORT, (u8)port_type_override);
-		if (ret) {
-			dev_err(&udev->dev, "write video port register failed! ret=%d\n", ret);
-			return -ENOENT;
-		}
+	/* Some dongles report a bogus VIDEO_PORT_* in the chip's port register
+	 * (e.g. 534d:6021 / MS912C reports 1 = SVIDEO on a physical VGA adapter).
+	 * Resolve global or VID:PID-scoped port_type= rules so multi-adapter
+	 * setups (such as an MS9132 HDMI monitor + an MS912C VGA dongle) only
+	 * override the targeted device. */
+	resolved_port_override = usb_hal_resolve_port_type_override(
+		port_type_param,
+		le16_to_cpu(udev->descriptor.idVendor),
+		le16_to_cpu(udev->descriptor.idProduct));
+	if (resolved_port_override >= 0) {
+		ret = usb_hal_set_port_type(usb_hal, resolved_port_override);
+		if (ret)
+			return ret;
 	}
 
 	ret = usb_dev->hal_dev->funcs->get_sdram_type(udev, &usb_hal->sdram_type);
@@ -1186,11 +1263,19 @@ struct usb_hal* usb_hal_init(struct usb_interface *interface, const struct usb_d
     
     sema_init(&usb_dev->sema, 1);
     init_waitqueue_head(&usb_dev->wait_queue);
+    init_completion(&usb_dev->thread_done);
 
     memset(name, 0, 32);
 	snprintf(name, 32, "msdisp%d_send", index);
 	usb_dev->thread_run_flag = 1;
 	usb_dev->thread = kthread_run(usb_hal_state_machine_entry, usb_hal, name);
+	if (IS_ERR(usb_dev->thread)) {
+		ret = PTR_ERR(usb_dev->thread);
+		usb_dev->thread = NULL;
+		dev_err(&udev->dev, "kthread_run failed! ret=%d\n", ret);
+		usb_hal_free_buf(usb_dev);
+		goto err;
+	}
 
 	usb_hal_sysfs_init(interface);
     goto out;
@@ -1223,7 +1308,7 @@ void usb_hal_destroy(struct usb_hal* hal)
 
     if (usb_dev->thread) {
         usb_hal_stop_thread(usb_dev);
-        msleep(300);
+        wait_for_completion(&usb_dev->thread_done);
         usb_dev->thread = NULL;
     }
 

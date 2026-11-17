@@ -25,6 +25,7 @@ struct msdisp_drm_connector {
 	struct drm_connector connector;
     enum drm_connector_status status;
 	int pipeline_index;
+	bool force_edid_refresh;
 	/* last udl_detect edid */
 	struct edid *edid;
 };

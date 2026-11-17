@@ -16,6 +16,8 @@
 #include <linux/version.h>
 #include <linux/device.h>
 #include <linux/fs.h>
+#include <linux/slab.h>
+#include <linux/string.h>
 #include <linux/usb.h>
 
 #include "hal_adaptor.h"
@@ -25,9 +27,14 @@
 static ssize_t usb_hal_buf_show(struct device* dev, struct device_attribute* attr, char* buf)
 {
     struct usb_hal* usb_hal = usb_intf_device_to_hal_func(dev);
-    struct usb_hal_dev* usb_dev = usb_hal->private;
-	struct usb_hal_buffer* usb_buf = &usb_dev->usb_buf;
+    struct usb_hal_dev* usb_dev;
+	struct usb_hal_buffer* usb_buf;
 	char tmp[256];
+
+	if (!usb_hal)
+		return -ENODEV;
+	usb_dev = usb_hal->private;
+	usb_buf = &usb_dev->usb_buf;
 
 	*buf = 0;
 	sprintf(tmp, "%s\n", dev->kobj.name);
@@ -45,9 +52,14 @@ static ssize_t usb_hal_buf_show(struct device* dev, struct device_attribute* att
 static ssize_t usb_hal_frame_show(struct device* dev, struct device_attribute* attr, char* buf)
 {
     struct usb_hal* usb_hal = usb_intf_device_to_hal_func(dev);
-    struct usb_hal_dev* usb_dev = usb_hal->private;
-    struct usb_hal_dev_frame_stat* stat = &usb_dev->stat;
+    struct usb_hal_dev* usb_dev;
+    struct usb_hal_dev_frame_stat* stat;
 	char tmp[256];
+
+	if (!usb_hal)
+		return -ENODEV;
+	usb_dev = usb_hal->private;
+	stat = &usb_dev->stat;
 
 	*buf = 0;
 
@@ -74,8 +86,12 @@ static ssize_t usb_hal_frame_show(struct device* dev, struct device_attribute* a
 static ssize_t usb_hal_dev_show(struct device* dev, struct device_attribute* attr, char* buf)
 {
     struct usb_hal* usb_hal = usb_intf_device_to_hal_func(dev);
-	struct usb_hal_dev* usb_dev = usb_hal->private;
+	struct usb_hal_dev* usb_dev;
 	char tmp[96];
+
+	if (!usb_hal)
+		return -ENODEV;
+	usb_dev = usb_hal->private;
 
 	*buf = 0;
 
@@ -94,31 +110,117 @@ static ssize_t usb_hal_dev_show(struct device* dev, struct device_attribute* att
 static ssize_t usb_hal_custom_mode_show(struct device* dev, struct device_attribute* attr, char* buf)
 {
 	struct usb_hal* usb_hal = usb_intf_device_to_hal_func(dev);
-	struct usb_hal_dev* usb_dev = usb_hal->private;
-	char tmp[64];
+	struct usb_hal_dev* usb_dev;
+	ssize_t len = 0;
 	int i;
 
-	*buf = 0;
+	if (!usb_hal)
+		return -ENODEV;
+	usb_dev = usb_hal->private;
 
-	sprintf(tmp, "custom mode cnt:%d\n", usb_dev->custom_mode_cnt);
-	strcat(buf, tmp);
+	len += scnprintf(buf + len, PAGE_SIZE - len, "custom mode cnt:%d\n", usb_dev->custom_mode_cnt);
 	for (i = 0; i < usb_dev->custom_mode_cnt; i++) {
-		sprintf(tmp, "width:%d height:%d rate:%d vid:%d\n", usb_dev->custom_mode[i].width, usb_dev->custom_mode[i].height,\
-			 usb_dev->custom_mode[i].rate, usb_dev->custom_mode[i].vic);
-		strcat(buf, tmp);
+		len += scnprintf(buf + len, PAGE_SIZE - len, "width:%d height:%d rate:%d vid:%d\n",
+				 usb_dev->custom_mode[i].width, usb_dev->custom_mode[i].height,
+				 usb_dev->custom_mode[i].rate, usb_dev->custom_mode[i].vic);
 	}
 
-	return strlen(buf);
+	return len;
+}
+
+static ssize_t usb_hal_custom_mode_store(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	struct usb_hal* usb_hal = usb_intf_device_to_hal_func(dev);
+	char *ori, *start, *cur;
+	int added = 0;
+
+	if (!usb_hal)
+		return -ENODEV;
+
+	ori = kstrndup(buf, count, GFP_KERNEL);
+	if (!ori)
+		return -ENOMEM;
+
+	strim(ori);
+	if (strcmp(ori, "clear") == 0 || strcmp(ori, "none") == 0) {
+		usb_hal_clear_custom_modes(usb_hal);
+		kfree(ori);
+		msdisp_usb_notify_hotplug(dev);
+		return count;
+	}
+
+	usb_hal_clear_custom_modes(usb_hal);
+	start = ori;
+	while ((cur = strsep(&start, ",")) != NULL) {
+		int width = 0, height = 0, rate = 0, vic = 0;
+		char trailing = 0;
+
+		cur = strim(cur);
+		if (!*cur)
+			continue;
+
+		if (sscanf(cur, "%d_%dx%d@%d%c", &vic, &width, &height, &rate, &trailing) != 4 ||
+		    width <= 0 || width > 0xffff || height <= 0 || height > 0xffff ||
+		    rate <= 0 || rate > 0xff || vic <= 0 || vic > 0xff) {
+			kfree(ori);
+			return -EINVAL;
+		}
+		if (usb_hal_add_custom_mode(usb_hal, width, height, rate, (unsigned char)vic) == 0)
+			added++;
+	}
+
+	kfree(ori);
+	if (added == 0)
+		return -EINVAL;
+
+	msdisp_usb_notify_hotplug(dev);
+	return count;
+}
+
+static ssize_t usb_hal_port_type_show(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	struct usb_hal* usb_hal = usb_intf_device_to_hal_func(dev);
+
+	if (!usb_hal)
+		return -ENODEV;
+
+	return scnprintf(buf, PAGE_SIZE, "%u\n", usb_hal->port_type);
+}
+
+static ssize_t usb_hal_port_type_store(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	struct usb_hal* usb_hal = usb_intf_device_to_hal_func(dev);
+	int port_val;
+	int ret;
+
+	if (!usb_hal)
+		return -ENODEV;
+
+	ret = kstrtoint(buf, 0, &port_val);
+	if (ret < 0)
+		return ret;
+
+	ret = usb_hal_set_port_type(usb_hal, port_val);
+	if (ret < 0)
+		return ret;
+
+	msdisp_usb_notify_hotplug(dev);
+	return count;
 }
 
 static ssize_t usb_hal_write_xdata_store(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
 {
     struct usb_hal* usb_hal = usb_intf_device_to_hal_func(dev);
-    struct usb_hal_dev* usb_dev = usb_hal->private;
-	const struct msdisp_hal_dev* hal_dev = usb_dev->hal_dev;
+    struct usb_hal_dev* usb_dev;
+	const struct msdisp_hal_dev* hal_dev;
 	u32 reg, data;
 	u8 read_data;
 	int ret;
+
+	if (!usb_hal)
+		return -ENODEV;
+	usb_dev = usb_hal->private;
+	hal_dev = usb_dev->hal_dev;
 
 	ret = sscanf(buf, "%x %x\n", &reg, &data);
 	if (ret != 2)
@@ -139,11 +241,16 @@ static ssize_t usb_hal_write_xdata_store(struct device* dev, struct device_attri
 static ssize_t usb_hal_read_xdata_store(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
 {
     struct usb_hal* usb_hal = usb_intf_device_to_hal_func(dev);
-    struct usb_hal_dev* usb_dev = usb_hal->private;
-	const struct msdisp_hal_dev* hal_dev = usb_dev->hal_dev;
+    struct usb_hal_dev* usb_dev;
+	const struct msdisp_hal_dev* hal_dev;
 	u16 reg;
 	int ret;
 	u8 data;
+
+	if (!usb_hal)
+		return -ENODEV;
+	usb_dev = usb_hal->private;
+	hal_dev = usb_dev->hal_dev;
 
 	ret = kstrtou16(buf, 0, &reg);
 	if (ret < 0)
@@ -161,7 +268,8 @@ static ssize_t usb_hal_read_xdata_store(struct device* dev, struct device_attrib
 static DEVICE_ATTR(buf, 0444, usb_hal_buf_show, NULL);
 static DEVICE_ATTR(frame, 0444, usb_hal_frame_show, NULL);
 static DEVICE_ATTR(hal_dev, 0444, usb_hal_dev_show, NULL);
-static DEVICE_ATTR(custom_mode, 0444, usb_hal_custom_mode_show, NULL);
+static DEVICE_ATTR(custom_mode, 0644, usb_hal_custom_mode_show, usb_hal_custom_mode_store);
+static DEVICE_ATTR(port_type, 0644, usb_hal_port_type_show, usb_hal_port_type_store);
 static DEVICE_ATTR(write_xdata, 0220, NULL, usb_hal_write_xdata_store);
 static DEVICE_ATTR(read_xdata, 0220, NULL, usb_hal_read_xdata_store);
 
@@ -171,6 +279,7 @@ static struct attribute* usb_hal_attribute[] = {
 	&dev_attr_frame.attr,
 	&dev_attr_hal_dev.attr,
 	&dev_attr_custom_mode.attr,
+	&dev_attr_port_type.attr,
 	&dev_attr_write_xdata.attr,
 	&dev_attr_read_xdata.attr,
 	NULL

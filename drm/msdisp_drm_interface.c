@@ -34,6 +34,7 @@
 
 
 #include "msdisp_drm_drv.h"
+#include "msdisp_drm_connector.h"
 #include "msdisp_plat_drv.h"
 #include "msdisp_drm_interface.h"
 #include "msdisp_drm_event.h"
@@ -45,12 +46,14 @@ static int has_free_pipeline(struct msdisp_drm_device* msdisp_drm)
     int i;
     int ret = 0;
 
+    mutex_lock(&msdisp_drm->pipeline_lock);
     for (i = 0; i < msdisp_drm->pipeline_cnt; i++) {
-        if (!msdisp_drm->pipeline[i].reg_flag) {
+        if (!msdisp_drm->pipeline[i].occupied && !msdisp_drm->pipeline[i].reg_flag) {
             ret = 1;
             break;
         }
-    } 
+    }
+    mutex_unlock(&msdisp_drm->pipeline_lock);
 
     return ret;
 }
@@ -115,16 +118,83 @@ int msdisp_drm_get_free_pipeline_index(struct drm_device* drm)
     int index = -1;
     struct msdisp_drm_device* msdisp_drm = to_msdisp_drm(drm);
 
+    mutex_lock(&msdisp_drm->pipeline_lock);
     for (i = 0; i < msdisp_drm->pipeline_cnt; i++) {
-        if (!msdisp_drm->pipeline[i].reg_flag) {
+        if (!msdisp_drm->pipeline[i].occupied && !msdisp_drm->pipeline[i].reg_flag) {
             index = i;
             break;
         }
     }
+    mutex_unlock(&msdisp_drm->pipeline_lock);
 
     return index;
 }
 EXPORT_SYMBOL(msdisp_drm_get_free_pipeline_index);
+
+/* Atomically locate a DRM device with a free pipeline, reserve that pipeline
+ * slot, and reset its event kfifo so concurrent USB probes (e.g. multiple
+ * MS91xx adapters plugged in at boot or on a hub) never claim the same pipe. */
+int msdisp_drm_acquire_free_pipeline(struct drm_device** out_drm)
+{
+    int i, p;
+    struct platform_device* pdev;
+    struct drm_device* drm;
+    struct msdisp_drm_device* msdisp_drm;
+
+    if (!out_drm) {
+        return -EINVAL;
+    }
+    *out_drm = NULL;
+
+    for (i = 0; i < MSDISP_DEVICE_COUNT_MAX; i++) {
+        pdev = msdisp_platform_get_device(i);
+        if (!pdev) {
+            continue;
+        }
+        drm = platform_get_drvdata(pdev);
+        if (!drm) {
+            continue;
+        }
+        msdisp_drm = to_msdisp_drm(drm);
+        mutex_lock(&msdisp_drm->pipeline_lock);
+        for (p = 0; p < msdisp_drm->pipeline_cnt; p++) {
+            if (!msdisp_drm->pipeline[p].occupied && !msdisp_drm->pipeline[p].reg_flag) {
+                msdisp_drm->pipeline[p].occupied = 1;
+                kfifo_reset(&msdisp_drm->pipeline[p].fifo);
+                mutex_unlock(&msdisp_drm->pipeline_lock);
+                *out_drm = drm;
+                return p;
+            }
+        }
+        mutex_unlock(&msdisp_drm->pipeline_lock);
+    }
+
+    return -ENODEV;
+}
+EXPORT_SYMBOL(msdisp_drm_acquire_free_pipeline);
+
+void msdisp_drm_release_pipeline(struct drm_device* drm, int pipeline_index)
+{
+    struct msdisp_drm_device* msdisp_drm;
+    struct msdisp_drm_pipeline* pipeline;
+
+    if (!drm || pipeline_index < 0 || pipeline_index >= MSDISP_DRM_MAX_PIPELINE_CNT) {
+        return;
+    }
+
+    msdisp_drm = to_msdisp_drm(drm);
+    if (pipeline_index >= msdisp_drm->pipeline_cnt) {
+        return;
+    }
+
+    pipeline = &msdisp_drm->pipeline[pipeline_index];
+    mutex_lock(&msdisp_drm->pipeline_lock);
+    kfifo_reset(&pipeline->fifo);
+    pipeline->reg_flag = 0;
+    pipeline->occupied = 0;
+    mutex_unlock(&msdisp_drm->pipeline_lock);
+}
+EXPORT_SYMBOL(msdisp_drm_release_pipeline);
 
 int msdisp_drm_get_pipeline_global_id(struct drm_device* drm, int pipeline_index)
 {
@@ -172,21 +242,30 @@ int msdisp_drm_register_usb_hal(struct drm_device* drm, int pipeline_index, stru
         return -EINVAL;
     }
 
-    if (pipeline_index >= MSDISP_DRM_MAX_PIPELINE_CNT) {
+    if (pipeline_index < 0 || pipeline_index >= msdisp_drm->pipeline_cnt) {
         return -EINVAL;
     }
 
     pipeline = &msdisp_drm->pipeline[pipeline_index];
+    mutex_lock(&msdisp_drm->pipeline_lock);
     if (pipeline->reg_flag) {
+        mutex_unlock(&msdisp_drm->pipeline_lock);
         return -EBUSY;
     }
+    pipeline->occupied = 1;
+    pipeline->reg_flag = 1;
+    mutex_unlock(&msdisp_drm->pipeline_lock);
+
     mutex_lock(&pipeline->hal_lock);
     pipeline->usb_hal = usb_hal;
-    mutex_unlock(&pipeline->hal_lock);
+    if (pipeline->connector) {
+        pipeline->connector->force_edid_refresh = true;
+    }
     if (MSDISP_DRM_STATUS_ENABLE == pipeline->drm_status) {
         ret = usb_hal->funcs->enable(usb_hal, pipeline->drm_width, pipeline->drm_height, pipeline->drm_rate, pipeline->drm_fb_format);
     }
-    pipeline->reg_flag = 1;
+    mutex_unlock(&pipeline->hal_lock);
+    (void)ret;
     return 0;
 }
 EXPORT_SYMBOL(msdisp_drm_register_usb_hal);
@@ -199,15 +278,21 @@ int msdisp_drm_unregister_usb_hal(struct drm_device* drm, int pipeline_index)
         return -EINVAL;
     }
 
-    if (pipeline_index >= MSDISP_DRM_MAX_PIPELINE_CNT) {
+    if (pipeline_index < 0 || pipeline_index >= msdisp_drm->pipeline_cnt) {
         return -EINVAL;
     }
 
     pipeline = &msdisp_drm->pipeline[pipeline_index];
     mutex_lock(&pipeline->hal_lock);
     pipeline->usb_hal = NULL;
-    pipeline->reg_flag = 0;
+    if (pipeline->connector) {
+        pipeline->connector->force_edid_refresh = true;
+    }
     mutex_unlock(&pipeline->hal_lock);
+
+    mutex_lock(&msdisp_drm->pipeline_lock);
+    pipeline->reg_flag = 0;
+    mutex_unlock(&msdisp_drm->pipeline_lock);
     return 0;
 }
 EXPORT_SYMBOL(msdisp_drm_unregister_usb_hal);
